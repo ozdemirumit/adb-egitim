@@ -127,16 +127,14 @@ class ADBAutomationEngine:
                 except Exception:
                     pass
 
-                # 2. Sayfa içeriğini Word Dökümanı olarak kaydet (Yazı, Başlık, Resimler)
+                # 2. Sayfa içeriğini Word Dökümanı olarak kaydet (Yazı, Başlık, Tablo, Resimler)
                 if self.save_word_docs and "my-educations" not in current_url and "giris" not in current_url:
                     self._capture_page_to_word()
 
                 # 3. Videoları denetle ve oynat
-                has_video = False
                 try:
                     video_count = self.page.locator("video").count()
                     if video_count > 0:
-                        has_video = True
                         for i in range(video_count):
                             video = self.page.locator("video").nth(i)
                             
@@ -160,10 +158,9 @@ class ADBAutomationEngine:
                 except Exception:
                     pass
 
-                # 4. Sayaç / Geri Sayım ve Buton Kontrolü (Metin/Resimli Sayfalar İçin)
+                # 4. Sayaç / Geri Sayım ("Kalan Zaman: 00:06") ve "İleri / Devam Et" Butonu Kontrolü
                 now = time.time()
-                if self.auto_next and (now - last_click_time > 2.5):
-                    # Sayaç bilgisini kontrol et
+                if self.auto_next and (now - last_click_time > 2.0):
                     self._check_timer_counter()
 
                     clicked = self._trigger_next_button()
@@ -180,29 +177,28 @@ class ADBAutomationEngine:
             time.sleep(1.5)
 
     def _check_timer_counter(self):
-        """Sayfadaki geri sayım sayacını veya kalan süreyi kontrol eder."""
+        """Sayfadaki geri sayım sayacını ('Kalan Zaman: 00:06') kontrol eder."""
         try:
-            # Geri sayım metni arama (ör. 00:15, Kalan Süre: 10s, vb.)
             page_text = self.page.locator("body").inner_text()
-            matches = re.findall(r'(?:kalan süre|süre|sayaç|bekleyiniz)?\s*:?\s*(\d{1,2}:\d{2}|\d+\s*sn|\d+\s*saniye)', page_text, re.IGNORECASE)
+            matches = re.findall(r'(?:kalan zaman|kalan süre|süre|sayaç)?\s*:?\s*(\d{1,2}:\d{2}|\d+\s*sn|\d+\s*saniye)', page_text, re.IGNORECASE)
             if matches:
                 timer_str = matches[0]
-                # Log only periodically to avoid spamming
-                if not hasattr(self, '_last_timer_logged') or time.time() - getattr(self, '_last_timer_logged', 0) > 5.0:
-                    self.log(f"⏳ Sayfa sayacı aktif ({timer_str}). Süre bitince sonraki derse geçilecek...")
+                if not hasattr(self, '_last_timer_logged') or time.time() - getattr(self, '_last_timer_logged', 0) > 4.0:
+                    self.log(f"⏳ Kalan Zaman: {timer_str} (Süre bitince otomatik 'İleri' butonuna basılacak)...")
                     self._last_timer_logged = time.time()
         except Exception:
             pass
 
     def _trigger_next_button(self) -> bool:
-        """Ekranda aktif olan devam/sonraki ders butonlarını bulur ve tıklar."""
+        """Ekranda aktif olan 'İleri / Devam Et / Sonraki Ders' butonlarını bulur ve tıklar."""
         if not self.page:
             return False
 
         target_texts = [
+            'ileri', '> ileri', 'ileri >', '>ileri',
             'devam et', 'devam', 'sonraki ders', 'sonraki konu', 
             'sonraki', 'eğitimi tamamla', 'eğitime başla', 
-            'tamam', 'ok', 'ileri', 'dersi bitir', 'eğitime devam et'
+            'tamam', 'ok', 'dersi bitir', 'eğitime devam et'
         ]
 
         try:
@@ -211,24 +207,24 @@ class ADBAutomationEngine:
                 if not btn.is_visible():
                     continue
 
-                text = (btn.inner_text() or btn.get_attribute("value") or "").strip().lower()
-                
-                # Check if button text matches target
-                if any(t == text or t in text for t in target_texts):
+                raw_text = (btn.inner_text() or btn.get_attribute("value") or "").strip()
+                clean_text = raw_text.lower().replace(">", "").strip()
+
+                if any(t == clean_text or t in clean_text for t in ['ileri', 'devam', 'sonraki', 'tamamla', 'başla', 'tamam', 'ok', 'bitir']):
                     # Disabled kontrolü
                     is_disabled = self.page.evaluate("""(el) => {
                         return el.disabled || el.classList.contains('disabled') || getComputedStyle(el).pointerEvents === 'none';
                     }""", btn.element_handle())
 
                     if is_disabled:
-                        # Buton henüz aktif değil (sayaç bekleniyor)
+                        # Geri sayım henüz bitmedi (buton kilitli)
                         continue
 
-                    self.log(f"👉 Butona tıklandı: '{text.upper()}'")
+                    self.log(f"👉 Otomatik İlerleme: '{raw_text.upper()}' butonuna tıklandı!")
                     btn.click()
                     return True
 
-            # Modal dialog button check
+            # Modal onay dialogları
             modals = self.page.locator(".modal button, .swal2-confirm, .ngx-modal button").all()
             for mbtn in modals:
                 if mbtn.is_visible():
@@ -259,60 +255,82 @@ class ADBAutomationEngine:
             pass
 
     def _capture_page_to_word(self):
-        """Mevcut dersteki yazı ve görselleri tespit edip Word (.docx) olarak kaydeder."""
+        """Ekrandaki Ders Başlığı, Metinler, Tablolar (Fonotik Alfabe vb.) ve Resimleri Word (.docx) olarak kaydeder."""
         try:
             current_url = self.page.url
             page_title = self.page.title() or "ADB Eğitim Notları"
 
             # Sayfa unik kimliği (tekrar kaydetmemek için)
-            page_id = f"{current_url}_{self.page.evaluate('() => document.body.innerText.length')}"
+            body_text = self.page.evaluate('() => document.body.innerText') or ""
+            page_id = f"{current_url}_{len(body_text)}"
             if page_id in self.visited_pages:
                 return
 
             self.visited_pages.add(page_id)
 
-            # python-docx aktarımı
             from docx import Document
             from docx.shared import Inches, Pt, RGBColor
 
             os.makedirs(self.output_dir, exist_ok=True)
 
-            # Temiz dosya adı oluştur
             clean_title = re.sub(r'[\\/*?:"<>|]', '', page_title).strip() or "ADB_Egitim_Notlari"
             docx_filename = os.path.join(self.output_dir, f"{clean_title}.docx")
 
-            # Belgeyi aç veya yeni oluştur
             if os.path.exists(docx_filename):
                 doc = Document(docx_filename)
             else:
                 doc = Document()
-                # Başlık ekle
                 heading = doc.add_heading(page_title, level=0)
-                heading.style.font.color.rgb = RGBColor(30, 58, 138) # Dark blue
+                heading.style.font.color.rgb = RGBColor(30, 58, 138)
 
-            # Sayfa Başlığı / Bölüm
-            sub_headings = self.page.locator("h1, h2, h3, .card-header, .lesson-title").all()
-            heading_text = ""
+            # 1. Ana Başlıklar (Örn: "FONOTİK ALFABE")
+            sub_headings = self.page.locator("h1, h2, h3, h4, .card-header, .lesson-title, header").all()
             for h in sub_headings:
                 if h.is_visible():
                     heading_text = (h.inner_text() or "").strip()
-                    if heading_text:
+                    if heading_text and len(heading_text) < 100:
                         doc.add_heading(heading_text, level=1)
                         break
 
-            # Sayfadaki Paragraflar / Yazılar
+            # 2. Sayfadaki Tablolar (Örn: Fonotik Alfabe Tablosu)
+            tables = self.page.locator("table").all()
+            added_table_count = 0
+            for tbl in tables:
+                try:
+                    if not tbl.is_visible():
+                        continue
+                    rows = tbl.locator("tr").all()
+                    if len(rows) > 0:
+                        doc_table = doc.add_table(rows=0, cols=0)
+                        doc_table.style = 'Table Grid'
+                        for row in rows:
+                            cells = row.locator("th, td").all()
+                            if len(cells) > 0:
+                                # Kolon sayısını ayarla
+                                while len(doc_table.columns) < len(cells):
+                                    doc_table.add_column(Inches(1.5))
+                                row_cells = doc_table.add_row().cells
+                                for c_idx, cell in enumerate(cells):
+                                    if c_idx < len(row_cells):
+                                        row_cells[c_idx].text = (cell.inner_text() or "").strip()
+                        added_table_count += 1
+                        doc.add_paragraph() # Boş satır
+                except Exception:
+                    pass
+
+            # 3. Metin Paragrafları
             paragraphs = self.page.locator("p, article, .content, .description, .lesson-text").all()
             added_text_count = 0
             for p in paragraphs:
                 if p.is_visible():
                     txt = (p.inner_text() or "").strip()
-                    if len(txt) > 10: # Anlamlı metinler
+                    if len(txt) > 10 and not txt.startswith("Kalan Zaman"):
                         p_elem = doc.add_paragraph(txt)
                         p_elem.style.font.name = 'Calibri'
                         p_elem.style.font.size = Pt(11)
                         added_text_count += 1
 
-            # Sayfadaki Görseller / Resimler
+            # 4. Görseller / Resimler
             images = self.page.locator("img").all()
             added_img_count = 0
             for img in images:
@@ -323,7 +341,6 @@ class ADBAutomationEngine:
                     if not src or "icon" in src.lower() or "logo" in src.lower() or "avatar" in src.lower():
                         continue
 
-                    # Resim verisini çek
                     img_bytes = None
                     if src.startswith("data:image"):
                         import base64
@@ -344,7 +361,7 @@ class ADBAutomationEngine:
                     pass
 
             doc.save(docx_filename)
-            self.log(f"📄 Sayfa içeriği Word belgesine eklendi: '{clean_title}.docx' ({added_text_count} Paragraf, {added_img_count} Görsel)")
+            self.log(f"📄 Sayfa Word belgesine aktarıldı: '{clean_title}.docx' (Tablo: {added_table_count}, Paragraf: {added_text_count}, Görsel: {added_img_count})")
 
-        except Exception as e:
+        except Exception:
             pass

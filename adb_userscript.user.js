@@ -341,9 +341,10 @@
 
         // Buton Metin Desenleri
         const targetTexts = [
+            'ileri', '> ileri', 'ileri >', '>ileri',
             'devam et', 'devam', 'sonraki ders', 'sonraki konu', 
             'sonraki', 'eğitimi tamamla', 'eğitime başla', 
-            'tamam', 'ok', 'ileri', 'dersi bitir', 'eğitime devam et'
+            'tamam', 'ok', 'dersi bitir', 'eğitime devam et'
         ];
 
         const buttons = Array.from(document.querySelectorAll('button, a, input[type="button"], input[type="submit"], .btn'));
