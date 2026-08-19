@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>ADB Otomasyonu</title>
+  <style>
+    body {
+      width: 260px;
+      margin: 0;
+      padding: 16px;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+      font-size: 13px;
+    }
+    h3 {
+      margin: 0 0 12px 0;
+      color: #38bdf8;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .info {
+      color: #94a3b8;
+      font-size: 12px;
+      line-height: 1.4;
+      margin-bottom: 12px;
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      color: white;
+      text-align: center;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+    }
+    .btn:hover {
+      background: linear-gradient(135deg, #0369a1, #075985);
+    }
+  </style>
+</head>
+<body>
+  <h3>⚓ ADB Otomasyonu</h3>
+  <p class="info">Eklenti aktif. <code>adbs.uab.gov.tr</code> adresine giriş yaptıktan sonra sağ alttaki canlı yüzen paneli kullanarak otomasyonu yönetebilirsiniz.</p>
+  <button class="btn" id="openPage">ADB Portalını Aç</button>
+  <script src="popup.js"></script>
+</body>
+</html>

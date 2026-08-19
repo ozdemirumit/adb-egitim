@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "ADB (adbs.uab.gov.tr) Otomatik Eğitim İzleyici",
+  "version": "1.0.0",
+  "description": "Ulaştırma ve Altyapı Bakanlığı ADB online eğitimlerini otomatik izler, süre tamamlanınca sonraki derse geçer.",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://adbs.uab.gov.tr/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://adbs.uab.gov.tr/*"],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "ADB Otomasyonu"
+  }
+}
