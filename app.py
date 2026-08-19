@@ -9,8 +9,8 @@ class ADBApp:
     def __init__(self, root):
         self.root = root
         self.root.title("ADB (adbs.uab.gov.tr) Otomatik Eğitim İzleyici v1.0")
-        self.root.geometry("640x520")
-        self.root.minsize(580, 480)
+        self.root.geometry("780x580")
+        self.root.minsize(700, 500)
         self.root.configure(bg="#0f172a")
 
         self.engine = ADBAutomationEngine(
@@ -57,10 +57,17 @@ class ADBApp:
         body_frame = tk.Frame(self.root, bg="#0f172a")
         body_frame.pack(fill=tk.BOTH, expand=True, padx=16, pady=12)
 
-        # Action Buttons Row
+        # Action Buttons Grid Container
         btn_frame = tk.Frame(body_frame, bg="#0f172a")
         btn_frame.pack(fill=tk.X, pady=(0, 12))
 
+        # Grid configuration
+        btn_frame.columnconfigure(0, weight=1)
+        btn_frame.columnconfigure(1, weight=1)
+        btn_frame.columnconfigure(2, weight=1)
+        btn_frame.columnconfigure(3, weight=1)
+
+        # Row 1 Buttons: Primary Actions
         self.btn_launch = tk.Button(
             btn_frame,
             text="🚀 1. Tarayıcıyı Aç & Giriş Yap",
@@ -70,12 +77,12 @@ class ADBApp:
             activebackground="#0369a1",
             activeforeground="white",
             relief=tk.FLAT,
-            padx=12,
-            pady=8,
+            padx=10,
+            pady=10,
             cursor="hand2",
             command=self.on_launch_browser
         )
-        self.btn_launch.pack(side=tk.LEFT, padx=(0, 8))
+        self.btn_launch.grid(row=0, column=0, columnspan=2, sticky="nsew", padx=4, pady=4)
 
         self.btn_start = tk.Button(
             btn_frame,
@@ -86,46 +93,46 @@ class ADBApp:
             activebackground="#16a34a",
             activeforeground="white",
             relief=tk.FLAT,
-            padx=12,
-            pady=8,
+            padx=10,
+            pady=10,
             cursor="hand2",
-            state=tk.DISABLED,
+            state=tk.NORMAL,  # Keep enabled so it's always visible and clickable
             command=self.on_start_automation
         )
-        self.btn_start.pack(side=tk.LEFT, padx=(0, 8))
+        self.btn_start.grid(row=0, column=2, columnspan=2, sticky="nsew", padx=4, pady=4)
 
+        # Row 2 Buttons: Control Actions
         self.btn_pause = tk.Button(
             btn_frame,
-            text="⏸️ Duraklat",
-            font=("Segoe UI", 10, "bold"),
+            text="⏸️ Duraklat / Devam Ettir",
+            font=("Segoe UI", 9, "bold"),
             bg="#eab308",
             fg="white",
             activebackground="#ca8a04",
             activeforeground="white",
             relief=tk.FLAT,
-            padx=12,
-            pady=8,
+            padx=8,
+            pady=6,
             cursor="hand2",
-            state=tk.DISABLED,
             command=self.on_pause_automation
         )
-        self.btn_pause.pack(side=tk.LEFT, padx=(0, 8))
+        self.btn_pause.grid(row=1, column=0, columnspan=2, sticky="nsew", padx=4, pady=4)
 
         self.btn_stop = tk.Button(
             btn_frame,
-            text="🛑 Kapat",
-            font=("Segoe UI", 10, "bold"),
+            text="🛑 Tarayıcıyı Kapat",
+            font=("Segoe UI", 9, "bold"),
             bg="#ef4444",
             fg="white",
             activebackground="#dc2626",
             activeforeground="white",
             relief=tk.FLAT,
-            padx=12,
-            pady=8,
+            padx=8,
+            pady=6,
             cursor="hand2",
             command=self.on_stop
         )
-        self.btn_stop.pack(side=tk.LEFT)
+        self.btn_stop.grid(row=1, column=2, columnspan=2, sticky="nsew", padx=4, pady=4)
 
         # Settings Card
         settings_frame = tk.LabelFrame(
@@ -196,7 +203,8 @@ class ADBApp:
         self.log_text.pack(fill=tk.BOTH, expand=True)
 
         self.log_message("🤖 ADB Otomasyon Uygulaması Başlatıldı.")
-        self.log_message("👉 Adım 1: 'Tarayıcıyı Aç & Giriş Yap' butonuna tıklayınız.")
+        self.log_message("👉 Adım 1: '🚀 1. Tarayıcıyı Aç & Giriş Yap' butonuna tıklayınız.")
+        self.log_message("👉 Adım 2: e-Devlet girişinizi tamamlayınca '▶️ 2. Otomasyonu Başlat' butonuna tıklayınız.")
 
     def log_message(self, msg: str):
         def append():
@@ -217,20 +225,24 @@ class ADBApp:
         self.root.after(0, update)
 
     def on_launch_browser(self):
-        self.btn_launch.config(state=tk.DISABLED)
+        self.log_message("🚀 Tarayıcı başlatılıyor, lütfen bekleyin...")
         threading.Thread(target=self._launch_thread, daemon=True).start()
 
     def _launch_thread(self):
         self.engine.launch_browser()
-        self.root.after(0, lambda: self.btn_start.config(state=tk.NORMAL))
 
     def on_start_automation(self):
+        if not self.engine.page:
+            messagebox.showwarning("Uyarı", "Lütfen önce '1. Tarayıcıyı Aç & Giriş Yap' butonuna basarak tarayıcıyı başlatın ve giriş yapın.")
+            return
+
         self.on_settings_changed()
         self.engine.start_automation_loop()
-        self.btn_start.config(state=tk.DISABLED)
-        self.btn_pause.config(state=tk.NORMAL, text="⏸️ Duraklat")
+        self.log_message("▶️ Otomasyon başlatıldı. Videolar ve dersler taranıyor...")
 
     def on_pause_automation(self):
+        if not self.engine.is_running:
+            return
         if self.engine.is_paused:
             self.engine.resume()
             self.btn_pause.config(text="⏸️ Duraklat")
@@ -253,9 +265,6 @@ class ADBApp:
 
     def on_stop(self):
         self.engine.stop()
-        self.btn_launch.config(state=tk.NORMAL)
-        self.btn_start.config(state=tk.DISABLED)
-        self.btn_pause.config(state=tk.DISABLED)
 
 def main():
     root = tk.Tk()
