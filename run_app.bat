@@ -1,29 +1,33 @@
 @echo off
-chcp 65001 > nul
 title ADB Otomatik Egitim Izleme Uygulamasi
 echo ========================================================
 echo   ADB (adbs.uab.gov.tr) OTOMATIK EGITIM IZLEYICI
 echo ========================================================
 echo.
 
-:: Check python installation
-where python >nul 2>nul
+echo [1/3] Gerekli Python paketleri kontrol ediliyor...
+python -m pip install -r requirements.txt
 if %errorlevel% neq 0 (
-    echo [HATA] Python bilgisayarınızda bulunamadı!
-    echo Lütfen https://www.python.org/ adresinden Python 3.10+ indirin ve 'Add Python to PATH' seçeneğini işaretleyin.
+    echo [HATA] Paket kurulumu basarisiz oldu.
     pause
-    exit /b 1
+    exit /b %errorlevel%
 )
 
-echo [1/3] Gerekli Python paketleri kontrol ediliyor...
-pip install -r requirements.txt
+echo.
+echo [2/3] Playwright Chromium tarayici bilesenleri kuruluyor...
+python -m playwright install chromium
+if %errorlevel% neq 0 (
+    echo [HATA] Playwright Chromium kurulumu basarisiz oldu.
+    pause
+    exit /b %errorlevel%
+)
 
 echo.
-echo [2/3] Playwright Chromium tarayıcı bileşenleri kuruluyor...
-playwright install chromium
-
-echo.
-echo [3/3] Uygulama başlatılıyor...
+echo [3/3] Uygulama baslatiliyor...
 python app.py
+if %errorlevel% neq 0 (
+    echo [HATA] Uygulama calisirken bir hata olustu.
+    pause
+)
 
 pause
