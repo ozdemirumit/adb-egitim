@@ -8,9 +8,9 @@ from adb_automation import ADBAutomationEngine
 class ADBApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("ADB (adbs.uab.gov.tr) Otomatik Eğitim İzleyici v1.0")
-        self.root.geometry("780x580")
-        self.root.minsize(700, 500)
+        self.root.title("ADB (adbs.uab.gov.tr) Otomatik Eğitim İzleyici v1.1")
+        self.root.geometry("820x620")
+        self.root.minsize(740, 520)
         self.root.configure(bg="#0f172a")
 
         self.engine = ADBAutomationEngine(
@@ -37,7 +37,7 @@ class ADBApp:
 
         title_label = tk.Label(
             header_frame, 
-            text="⚓ ADB Otomatik Eğitim İzleyici", 
+            text="⚓ ADB Otomatik Eğitim & Word Döküman Oluşturucu", 
             font=("Segoe UI", 14, "bold"), 
             fg="#38bdf8", 
             bg="#1e293b"
@@ -61,7 +61,6 @@ class ADBApp:
         btn_frame = tk.Frame(body_frame, bg="#0f172a")
         btn_frame.pack(fill=tk.X, pady=(0, 12))
 
-        # Grid configuration
         btn_frame.columnconfigure(0, weight=1)
         btn_frame.columnconfigure(1, weight=1)
         btn_frame.columnconfigure(2, weight=1)
@@ -96,7 +95,7 @@ class ADBApp:
             padx=10,
             pady=10,
             cursor="hand2",
-            state=tk.NORMAL,  # Keep enabled so it's always visible and clickable
+            state=tk.NORMAL,
             command=self.on_start_automation
         )
         self.btn_start.grid(row=0, column=2, columnspan=2, sticky="nsew", padx=4, pady=4)
@@ -137,7 +136,7 @@ class ADBApp:
         # Settings Card
         settings_frame = tk.LabelFrame(
             body_frame,
-            text=" ⚙️ Otomasyon Ayarları ",
+            text=" ⚙️ Otomasyon ve Kayıt Ayarları ",
             font=("Segoe UI", 10, "bold"),
             fg="#94a3b8",
             bg="#1e293b",
@@ -156,7 +155,7 @@ class ADBApp:
         self.speed_menu.grid(row=0, column=1, sticky=tk.W, padx=8, pady=4)
         self.speed_menu.bind("<<ComboboxSelected>>", self.on_speed_changed)
 
-        # Checkboxes
+        # Checkboxes Row 1
         self.mute_var = tk.BooleanVar(value=True)
         cb_mute = tk.Checkbutton(
             settings_frame,
@@ -170,12 +169,12 @@ class ADBApp:
             activeforeground="#f8fafc",
             command=self.on_settings_changed
         )
-        cb_mute.grid(row=0, column=2, sticky=tk.W, padx=16, pady=4)
+        cb_mute.grid(row=0, column=2, sticky=tk.W, padx=12, pady=4)
 
         self.auto_next_var = tk.BooleanVar(value=True)
         cb_next = tk.Checkbutton(
             settings_frame,
-            text="Otomatik Sonraki Ders",
+            text="Otomatik Sonraki Ders / Sayfa",
             variable=self.auto_next_var,
             font=("Segoe UI", 9),
             fg="#f8fafc",
@@ -187,8 +186,24 @@ class ADBApp:
         )
         cb_next.grid(row=0, column=3, sticky=tk.W, padx=8, pady=4)
 
+        # Checkboxes Row 2: Word Export
+        self.word_var = tk.BooleanVar(value=True)
+        cb_word = tk.Checkbutton(
+            settings_frame,
+            text="📄 Sayfa İçeriklerini (Yazı & Resimleri) Word (.docx) Olarak Kaydet",
+            variable=self.word_var,
+            font=("Segoe UI", 9, "bold"),
+            fg="#38bdf8",
+            bg="#1e293b",
+            selectcolor="#0f172a",
+            activebackground="#1e293b",
+            activeforeground="#38bdf8",
+            command=self.on_settings_changed
+        )
+        cb_word.grid(row=1, column=0, columnspan=4, sticky=tk.W, padx=8, pady=6)
+
         # Log Window
-        log_label = tk.Label(body_frame, text="📋 Canlı İzleme Günlüğü (Console Log):", font=("Segoe UI", 9, "bold"), fg="#94a3b8", bg="#0f172a")
+        log_label = tk.Label(body_frame, text="📋 Canlı İzleme ve Dökümantasyon Günlüğü:", font=("Segoe UI", 9, "bold"), fg="#94a3b8", bg="#0f172a")
         log_label.pack(anchor=tk.W, pady=(0, 4))
 
         self.log_text = scrolledtext.ScrolledText(
@@ -202,7 +217,8 @@ class ADBApp:
         )
         self.log_text.pack(fill=tk.BOTH, expand=True)
 
-        self.log_message("🤖 ADB Otomasyon Uygulaması Başlatıldı.")
+        self.log_message("🤖 ADB Otomasyon ve Word Dökümantasyon Uygulaması Başlatıldı.")
+        self.log_message("📄 Sayfa içerikleri 'Egitim_Dokumanlari' klasörüne Word (.docx) olarak kaydedilecektir.")
         self.log_message("👉 Adım 1: '🚀 1. Tarayıcıyı Aç & Giriş Yap' butonuna tıklayınız.")
         self.log_message("👉 Adım 2: e-Devlet girişinizi tamamlayınca '▶️ 2. Otomasyonu Başlat' butonuna tıklayınız.")
 
@@ -238,7 +254,7 @@ class ADBApp:
 
         self.on_settings_changed()
         self.engine.start_automation_loop()
-        self.log_message("▶️ Otomasyon başlatıldı. Videolar ve dersler taranıyor...")
+        self.log_message("▶️ Otomasyon başlatıldı. Videolar, metinler, resimler ve sayaçlar takip ediliyor...")
 
     def on_pause_automation(self):
         if not self.engine.is_running:
@@ -261,6 +277,7 @@ class ADBApp:
     def on_settings_changed(self):
         self.engine.mute_audio = self.mute_var.get()
         self.engine.auto_next = self.auto_next_var.get()
+        self.engine.save_word_docs = self.word_var.get()
         self.on_speed_changed()
 
     def on_stop(self):

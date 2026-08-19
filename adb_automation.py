@@ -1,7 +1,10 @@
+import os
 import time
+import re
 import threading
-import logging
-from typing import Callable, Optional
+import io
+import requests
+from typing import Callable, Optional, Set
 from playwright.sync_api import sync_playwright, Page, BrowserContext, Browser
 
 # Anti-blur JS payload to override visibilityState and blur events
@@ -15,7 +18,7 @@ document.onvisibilitychange = null;
 """
 
 class ADBAutomationEngine:
-    """ADB Online Eğitim Otomasyon Motoru (Playwright Tabanlı)"""
+    """ADB Online Eğitim Otomasyon ve Word Dökümantasyon Motoru (Playwright Tabanlı)"""
 
     def __init__(self, log_callback: Optional[Callable[[str], None]] = None, status_callback: Optional[Callable[[str], None]] = None):
         self.log_callback = log_callback or print
@@ -31,7 +34,11 @@ class ADBAutomationEngine:
         self.playback_speed = 2.0
         self.auto_next = True
         self.mute_audio = True
+        self.save_word_docs = True
+        
         self.thread: Optional[threading.Thread] = None
+        self.visited_pages: Set[str] = set()
+        self.output_dir = os.path.join(os.getcwd(), "Egitim_Dokumanlari")
 
     def log(self, message: str):
         self.log_callback(message)
@@ -61,7 +68,7 @@ class ADBAutomationEngine:
             self.log("🌐 https://adbs.uab.gov.tr/ adresine gidiliyor...")
             self.page.goto("https://adbs.uab.gov.tr/users/my-educations", wait_until="domcontentloaded")
             self.set_status("Giriş Bekleniyor")
-            self.log("🔑 Lütfen açılan pencerede e-Devlet ile giriş yapınız. Giriş yaptıktan sonra 'Otomasyonu Başlat' butonuna tıklayınız.")
+            self.log("🔑 Lütfen açılan pencerede e-Devlet ile giriş yapınız. Giriş yaptıktan sonra '▶️ 2. Otomasyonu Başlat' butonuna tıklayınız.")
         except Exception as e:
             self.log(f"❌ Tarayıcı başlatma hatası: {str(e)}")
             self.stop()
@@ -112,16 +119,24 @@ class ADBAutomationEngine:
                     time.sleep(1)
                     continue
 
+                current_url = self.page.url
+
                 # 1. Anti-blur kontrolü yap
                 try:
                     self.page.evaluate(ANTI_BLUR_SCRIPT)
                 except Exception:
                     pass
 
-                # 2. Videoları denetle ve oynat
+                # 2. Sayfa içeriğini Word Dökümanı olarak kaydet (Yazı, Başlık, Resimler)
+                if self.save_word_docs and "my-educations" not in current_url and "giris" not in current_url:
+                    self._capture_page_to_word()
+
+                # 3. Videoları denetle ve oynat
+                has_video = False
                 try:
                     video_count = self.page.locator("video").count()
                     if video_count > 0:
+                        has_video = True
                         for i in range(video_count):
                             video = self.page.locator("video").nth(i)
                             
@@ -142,27 +157,44 @@ class ADBAutomationEngine:
                             if is_ended and self.auto_next:
                                 self.log(f"✅ Video {i+1} tamamlandı. Sonraki adıma geçiliyor...")
                                 self._trigger_next_button()
-                except Exception as e:
+                except Exception:
                     pass
 
-                # 3. Devam Et / Sonraki Ders / Eğitimi Tamamla Butonlarını Tara
+                # 4. Sayaç / Geri Sayım ve Buton Kontrolü (Metin/Resimli Sayfalar İçin)
                 now = time.time()
-                if self.auto_next and (now - last_click_time > 3.0):
+                if self.auto_next and (now - last_click_time > 2.5):
+                    # Sayaç bilgisini kontrol et
+                    self._check_timer_counter()
+
                     clicked = self._trigger_next_button()
                     if clicked:
                         last_click_time = now
 
-                # 4. Kurs listesi sayfasında ise otomatik derse gir
-                if "my-educations" in self.page.url:
+                # 5. Kurs listesi sayfasında ise otomatik derse gir
+                if "my-educations" in current_url:
                     self._check_education_list()
 
             except Exception as e:
-                # Sayfa kapanmış olabilir veya gezinme durumunda
                 time.sleep(1)
 
             time.sleep(1.5)
 
-    def _trigger_next_button() -> bool:
+    def _check_timer_counter(self):
+        """Sayfadaki geri sayım sayacını veya kalan süreyi kontrol eder."""
+        try:
+            # Geri sayım metni arama (ör. 00:15, Kalan Süre: 10s, vb.)
+            page_text = self.page.locator("body").inner_text()
+            matches = re.findall(r'(?:kalan süre|süre|sayaç|bekleyiniz)?\s*:?\s*(\d{1,2}:\d{2}|\d+\s*sn|\d+\s*saniye)', page_text, re.IGNORECASE)
+            if matches:
+                timer_str = matches[0]
+                # Log only periodically to avoid spamming
+                if not hasattr(self, '_last_timer_logged') or time.time() - getattr(self, '_last_timer_logged', 0) > 5.0:
+                    self.log(f"⏳ Sayfa sayacı aktif ({timer_str}). Süre bitince sonraki derse geçilecek...")
+                    self._last_timer_logged = time.time()
+        except Exception:
+            pass
+
+    def _trigger_next_button(self) -> bool:
         """Ekranda aktif olan devam/sonraki ders butonlarını bulur ve tıklar."""
         if not self.page:
             return False
@@ -176,22 +208,35 @@ class ADBAutomationEngine:
         try:
             buttons = self.page.locator("button, a, input[type='button'], input[type='submit'], .btn").all()
             for btn in buttons:
-                if not btn.is_visible() or not btn.is_enabled():
+                if not btn.is_visible():
                     continue
 
                 text = (btn.inner_text() or btn.get_attribute("value") or "").strip().lower()
+                
+                # Check if button text matches target
                 if any(t == text or t in text for t in target_texts):
-                    self.log(f"👉 Otomatik tıklama yapılıyor: '{text.upper()}'")
+                    # Disabled kontrolü
+                    is_disabled = self.page.evaluate("""(el) => {
+                        return el.disabled || el.classList.contains('disabled') || getComputedStyle(el).pointerEvents === 'none';
+                    }""", btn.element_handle())
+
+                    if is_disabled:
+                        # Buton henüz aktif değil (sayaç bekleniyor)
+                        continue
+
+                    self.log(f"👉 Butona tıklandı: '{text.upper()}'")
                     btn.click()
                     return True
 
             # Modal dialog button check
             modals = self.page.locator(".modal button, .swal2-confirm, .ngx-modal button").all()
             for mbtn in modals:
-                if mbtn.is_visible() and mbtn.is_enabled():
-                    self.log(f"👉 Modal onay butonuna tıklandı: '{mbtn.inner_text()}'")
-                    mbtn.click()
-                    return True
+                if mbtn.is_visible():
+                    is_disabled = self.page.evaluate("(el) => el.disabled || el.classList.contains('disabled')", mbtn.element_handle())
+                    if not is_disabled:
+                        self.log(f"👉 Modal onay butonuna tıklandı: '{mbtn.inner_text()}'")
+                        mbtn.click()
+                        return True
         except Exception:
             pass
 
@@ -211,4 +256,95 @@ class ADBAutomationEngine:
                     time.sleep(2)
                     break
         except Exception:
+            pass
+
+    def _capture_page_to_word(self):
+        """Mevcut dersteki yazı ve görselleri tespit edip Word (.docx) olarak kaydeder."""
+        try:
+            current_url = self.page.url
+            page_title = self.page.title() or "ADB Eğitim Notları"
+
+            # Sayfa unik kimliği (tekrar kaydetmemek için)
+            page_id = f"{current_url}_{self.page.evaluate('() => document.body.innerText.length')}"
+            if page_id in self.visited_pages:
+                return
+
+            self.visited_pages.add(page_id)
+
+            # python-docx aktarımı
+            from docx import Document
+            from docx.shared import Inches, Pt, RGBColor
+
+            os.makedirs(self.output_dir, exist_ok=True)
+
+            # Temiz dosya adı oluştur
+            clean_title = re.sub(r'[\\/*?:"<>|]', '', page_title).strip() or "ADB_Egitim_Notlari"
+            docx_filename = os.path.join(self.output_dir, f"{clean_title}.docx")
+
+            # Belgeyi aç veya yeni oluştur
+            if os.path.exists(docx_filename):
+                doc = Document(docx_filename)
+            else:
+                doc = Document()
+                # Başlık ekle
+                heading = doc.add_heading(page_title, level=0)
+                heading.style.font.color.rgb = RGBColor(30, 58, 138) # Dark blue
+
+            # Sayfa Başlığı / Bölüm
+            sub_headings = self.page.locator("h1, h2, h3, .card-header, .lesson-title").all()
+            heading_text = ""
+            for h in sub_headings:
+                if h.is_visible():
+                    heading_text = (h.inner_text() or "").strip()
+                    if heading_text:
+                        doc.add_heading(heading_text, level=1)
+                        break
+
+            # Sayfadaki Paragraflar / Yazılar
+            paragraphs = self.page.locator("p, article, .content, .description, .lesson-text").all()
+            added_text_count = 0
+            for p in paragraphs:
+                if p.is_visible():
+                    txt = (p.inner_text() or "").strip()
+                    if len(txt) > 10: # Anlamlı metinler
+                        p_elem = doc.add_paragraph(txt)
+                        p_elem.style.font.name = 'Calibri'
+                        p_elem.style.font.size = Pt(11)
+                        added_text_count += 1
+
+            # Sayfadaki Görseller / Resimler
+            images = self.page.locator("img").all()
+            added_img_count = 0
+            for img in images:
+                try:
+                    if not img.is_visible():
+                        continue
+                    src = img.get_attribute("src")
+                    if not src or "icon" in src.lower() or "logo" in src.lower() or "avatar" in src.lower():
+                        continue
+
+                    # Resim verisini çek
+                    img_bytes = None
+                    if src.startswith("data:image"):
+                        import base64
+                        base64_data = src.split(",")[1]
+                        img_bytes = base64.b64decode(base64_data)
+                    else:
+                        if src.startswith("/"):
+                            src = "https://adbs.uab.gov.tr" + src
+                        res = requests.get(src, timeout=5)
+                        if res.status_code == 200:
+                            img_bytes = res.content
+
+                    if img_bytes:
+                        image_stream = io.BytesIO(img_bytes)
+                        doc.add_picture(image_stream, width=Inches(5.5))
+                        added_img_count += 1
+                except Exception:
+                    pass
+
+            doc.save(docx_filename)
+            self.log(f"📄 Sayfa içeriği Word belgesine eklendi: '{clean_title}.docx' ({added_text_count} Paragraf, {added_img_count} Görsel)")
+
+        except Exception as e:
             pass
