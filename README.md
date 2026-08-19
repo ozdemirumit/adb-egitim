@@ -1,68 +1,122 @@
 # ⚓ ADB (adbs.uab.gov.tr) Otomatik Eğitim İzleme Uygulaması
 
-Bu proje, **T.C. Ulaştırma ve Altyapı Bakanlığı Amatör Denizci Eğitim ve Başvuru Sistemi** (`https://adbs.uab.gov.tr/users/my-educations`) üzerindeki online eğitimlerin videolarını sırasıyla izleyen, süreleri dolduğunda veya video bittiğinde otomatik olarak sonraki derse geçen otomasyon sistemidir.
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.10%2B-blue.svg" alt="Python 3.10+">
+  <img src="https://img.shields.io/badge/Playwright-Automated-green.svg" alt="Playwright">
+  <img src="https://img.shields.io/badge/Chrome_Extension-Manifest_V3-orange.svg" alt="Manifest V3">
+  <img src="https://img.shields.io/badge/Security-No_Credentials_Stored-brightgreen.svg" alt="Security">
+</p>
+
+T.C. Ulaştırma ve Altyapı Bakanlığı **Amatör Denizci Eğitim ve Başvuru Sistemi** (`https://adbs.uab.gov.tr/users/my-educations`) üzerindeki online eğitim ders videolarını sırasıyla izleyen, süreler dolduğunda ve video bittiğinde otomatik olarak sonraki derse geçen masaüstü otomasyon uygulaması ve tarayıcı eklentisidir.
+
+---
+
+## 🛡️ Güvenlik & Gizlilik İlkesi
 
 > [!IMPORTANT]
-> **Güvenlik & Gizlilik:** Giriş bilgilerinizi (e-Devlet şifresi, T.C. Kimlik vb.) **hiçbir şekilde kaydetmez veya saklamaz**. Giriş işlemi tamamen kullanıcının kendi kontrolünde gerçek tarayıcı penceresinde yapılır.
+> **Kullanıcı Verileri Güvendedir:**
+> - Uygulama e-Devlet şifrenizi, T.C. Kimlik numaranızı veya kişisel bilgilerinizi **hiçbir şekilde kaydetmez, saklamaz ve uzak sunuculara göndermez**.
+> - Giriş işlemi kullanıcının kendi kontrolünde açılan resmi tarayıcı penceresinde (`adbs.uab.gov.tr`) manuel olarak yapılır.
+> - Otomasyon kodu tamamen açık kaynaklıdır.
 
 ---
 
-## 🌟 Öne Çıkan Özellikler
+## ✨ Öne Çıkan Özellikler
 
-- 🚀 **Tam Otomatik İlerleme:** Videolar bitince veya sayaç sıfırlanınca *"Devam Et"*, *"Sonraki Ders"*, *"Eğitimi Tamamla"* butonlarına otomatik tıklar.
-- ⚡ **Oynatma Hızı Ayarı:** Videoları `1.0x`, `1.5x`, `2.0x`, `4.0x`, `8.0x` veya `16.0x` hızlarında oynatabilme imkanı.
+- 🚀 **Tam Otomatik İlerleme:** Video bitişlerinde, sayaç sıfırlanmalarında *"Devam Et"*, *"Sonraki Ders"*, *"Eğitimi Tamamla"* ve onay butonlarını otomatik algılar ve tıklar.
+- ⚡ **Ayarlanabilir Oynatma Hızı:** Videoları `1.0x`, `1.5x`, `2.0x`, `4.0x`, `8.0x` veya `16.0x` hızlarında oynatabilme.
 - 🛡️ **Sekme Odağı Koruması (Anti-Blur):** Başka bir sekmede çalışırken veya pencere küçültüldüğünde platformun videoyu durdurmasını engeller.
-- 🔇 **Sessiz Mod:** Videoları arka planda sessiz çalıştırabilir.
-- 📱 **Çift Çalışma Seçeneği:**
-  1. **Python Masaüstü Uygulaması (Playwright)**
-  2. **Tarayıcı Eklentisi / Tampermonkey Userscript**
+- 🔇 **Sessiz Mod (Mute):** Arka planda videoları sessiz olarak çalıştırma imkanı.
+- 🖥️ **Çift Çalışma Seçeneği:**
+  1. **Python Playwright Masaüstü Uygulaması (GUI)**
+  2. **Chrome / Edge Tarayıcı Eklentisi (Unpacked Extension)**
+  3. **Tampermonkey / Violentmonkey Kullanıcı Betiği**
 
 ---
 
-## 🛠️ YÖNTEM 1: Masaüstü Python Uygulaması Kullanımı (Önerilen)
+## 📁 Proje Klasör Yapısı
 
-### Adım 1: Kurulum ve Başlatma
-1. `run_app.bat` dosyasına çift tıklayın.
-2. Gerekli kütüphaneler (`playwright`) ve tarayıcı bileşenleri otomatik yüklenecek ve grafik arayüz açılacaktır.
+```
+ADB-egitim/
+├── app.py                   # Custom Tkinter Masaüstü Grafik Arayüzü (GUI)
+├── adb_automation.py        # Playwright Otomasyon ve Video Takip Motoru
+├── run_app.bat              # Tek tıkla bağımlılıkları kurup başlatan Windows scripti
+├── requirements.txt         # Python bağımlılık listesi
+├── manifest.json            # Chrome Eklentisi Manifest V3 Yapılandırması
+├── content.js               # Chrome Eklentisi Sayfa İçi Otomasyon Betiği
+├── popup.html / popup.js    # Chrome Eklentisi Açılır Arayüzü
+├── adb_userscript.user.js   # Tampermonkey / Violentmonkey Betiği
+├── .gitignore               # Git dışlama kuralları
+└── README.md                # Proje Dökümantasyonu
+```
 
-*(Alternatif olarak komut satırından:)*
+---
+
+## 🚀 Kurulum ve Kullanım
+
+### Yöntem 1: Masaüstü Python Uygulaması (Önerilen)
+
+#### Hızlı Başlatma:
+1. `run_app.bat` dosyasına **çift tıklayın**.
+2. Gerekli kütüphaneler ve Playwright Chromium tarayıcısı otomatik kontrol edilip uygulama başlatılacaktır.
+
+#### Komut Satırından Başlatma:
 ```bash
-pip install -r requirements.txt
-playwright install chromium
+# 1. Depoyu klonlayın
+git clone https://github.com/ozdemirumit/adb-egitim.git
+cd adb-egitim
+
+# 2. Paketleri ve tarayıcı bileşenini kurun
+python -m pip install -r requirements.txt
+python -m playwright install chromium
+
+# 3. Uygulamayı başlatın
 python app.py
 ```
 
-### Adım 2: Çalıştırma
+#### Kullanım Adımları:
 1. Açılan uygulamada **`🚀 1. Tarayıcıyı Aç & Giriş Yap`** butonuna tıklayın.
 2. Açılan Chrome penceresinde e-Devlet ile **hesabınıza giriş yapın** ve `/users/my-educations` sayfasına gelin.
 3. Giriş yaptıktan sonra uygulamadaki **`▶️ 2. Otomasyonu Başlat`** butonuna tıklayın.
-4. Otomasyon arka planda tüm videoları izleyecek ve eğitimleri sırayla tamamlayacaktır!
+4. Otomasyon arka planda tüm videoları izleyecek ve eğitimleri sırayla tamamlayacaktır.
 
 ---
 
-## 🌐 YÖNTEM 2: Chrome Eklentisi Olarak Kullanma
-
-Eğer bilgisayarınıza Python kurmak istemiyorsanız doğrudan tarayıcınıza eklenti olarak yükleyebilirsiniz:
+### Yöntem 2: Chrome / Edge Eklentisi Olarak Kullanma
 
 1. Google Chrome veya Microsoft Edge tarayıcınızda `chrome://extensions/` adresine gidin.
-2. Sağ üstteki **"Geliştirici modu" (Developer mode)** anahtarını açın.
+2. Sağ üst köşedeki **"Geliştirici modu" (Developer mode)** anahtarını açın.
 3. Sol üstteki **"Paketlenmemiş öge yükle" (Load unpacked)** butonuna tıklayın.
-4. Bu klasörü (`c:\AI-Codes\ADB-egitim`) seçin.
+4. `adb-egitim` klasörünü seçin.
 5. `https://adbs.uab.gov.tr/users/my-educations` adresine gidin ve giriş yapın.
-6. Ekranın sağ alt köşesinde beliren **canlı yüzen panelden** otomasyonu ve hızı yönetin.
+6. Ekranın sağ alt köşesinde beliren **canlı yüzen paneli (Floating UI)** kullanarak otomasyonu başlatın.
 
 ---
 
-## 📜 YÖNTEM 3: Tampermonkey Betiği (Userscript)
+### Yöntem 3: Tampermonkey Betiği (Userscript)
 
 1. Tarayıcınıza [Tampermonkey](https://www.tampermonkey.net/) eklentisini kurun.
-2. Klasör içindeki `adb_userscript.user.js` dosyasının içeriğini kopyalayıp Tampermonkey paneline yeni betik olarak ekleyin ve kaydedin.
+2. Projedeki `adb_userscript.user.js` dosyasının içeriğini kopyalayıp Tampermonkey paneline yeni betik olarak yapıştırın ve kaydedin.
 
 ---
 
-## ❓ Sıkça Sorulan Sorular
+## 🔗 GitHub Depo Bilgileri
 
-- **Videolar donarsa veya durursa ne olur?**
-  Otomasyon her 1.5 saniyede bir duraklatılmış videoları kontrol eder ve otomatik oynatmaya devam eder.
-- **Başka bir iş yaparken arkada çalışır mı?**
-  Evet, Anti-Blur / Sekme Odağı Koruması sayesinde siz başka sekmelerde veya programlarda çalışırken videolar akmaya devam eder.
+- **Repository URL:** [https://github.com/ozdemirumit/adb-egitim](https://github.com/ozdemirumit/adb-egitim)
+- **Klonlama Komutu:**
+  ```bash
+  git clone https://github.com/ozdemirumit/adb-egitim.git
+  ```
+
+---
+
+## ❓ Sıkça Sorulan Sorular (SSS)
+
+**S: Şifrem veya T.C. Kimlik numaram kaydediliyor mu?**  
+*C: Hayır. Giriş işlemleri resmi e-Devlet kapısı üzerinden tamamen kullanıcının kendi kontrolünde yapılır.*
+
+**S: Sekmeyi değiştirdiğimde veya tarayıcıyı alta aldığımda videolar duruyor mu?**  
+*C: Hayır. Uygulamaya dahil edilen Anti-Blur (Sekme Odak Koruması) sayesinde tarayıcı arka planda olsa bile videolar izlenmeye devam eder.*
+
+**S: Videolar bittiğinde ne olur?**  
+*C: Otomasyon "Devam Et" veya "Sonraki Ders" butonunu algılayarak bir sonraki modüle veya kursa otomatik geçiş yapar.*
