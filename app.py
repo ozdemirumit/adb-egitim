@@ -9,7 +9,7 @@ class ADBApp:
     def __init__(self, root):
         self.root = root
         self.root.title("ADB (adbs.uab.gov.tr) Otomatik Eğitim İzleyici v1.0")
-        self.root.geometry("640 x 520")
+        self.root.geometry("640x520")
         self.root.minsize(580, 480)
         self.root.configure(bg="#0f172a")
 
