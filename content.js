@@ -4,7 +4,7 @@
     'use strict';
 
     const state = {
-        active: true,
+        active: false,
         speed: 1.0,
         autoNext: true,
         antiBlur: true,
