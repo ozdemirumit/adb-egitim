@@ -305,59 +305,250 @@
         });
     }
 
-    let lastClickTime = 0;
-    function triggerNextStep() {
-        if (!state.active || !state.autoNext) return;
-        const now = Date.now();
-        if (now - lastClickTime < 3000) return;
+    function normalizeText(str) {
+        if (!str) return '';
+        return str
+            .replace(/İ/g, 'i')
+            .replace(/I/g, 'ı')
+            .replace(/Ğ/g, 'g')
+            .replace(/Ü/g, 'u')
+            .replace(/Ş/g, 's')
+            .replace(/Ö/g, 'o')
+            .replace(/Ç/g, 'c')
+            .toLowerCase()
+            .replace(/[>><«»]/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
 
-        const targetTexts = [
-            'ileri', '> ileri', 'ileri >', '>ileri',
+    function isElementVisible(el) {
+        if (!el) return false;
+        try {
+            const style = window.getComputedStyle(el);
+            if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+            const rect = el.getBoundingClientRect();
+            return rect.width > 0 || rect.height > 0 || el.getClientRects().length > 0;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function isElementDisabled(el) {
+        if (!el) return true;
+        try {
+            if (el.disabled || el.getAttribute('disabled') !== null) return true;
+            if (el.getAttribute('aria-disabled') === 'true') return true;
+            if (el.classList.contains('disabled') || el.classList.contains('is-disabled')) return true;
+            const style = window.getComputedStyle(el);
+            if (style.pointerEvents === 'none') return true;
+        } catch (e) {}
+        return false;
+    }
+
+    function clickElement(el) {
+        if (!el) return;
+        try {
+            el.removeAttribute('disabled');
+            el.classList.remove('disabled', 'is-disabled', 'btn-disabled');
+            el.setAttribute('aria-disabled', 'false');
+            el.style.pointerEvents = 'auto';
+        } catch (e) {}
+
+        if (el.tagName === 'A' && el.href && el.href.startsWith('javascript:')) {
+            try {
+                eval(el.href.replace('javascript:', ''));
+            } catch(e) {}
+        }
+
+        const events = ['pointerdown', 'mousedown', 'mouseup', 'click'];
+        events.forEach(evtName => {
+            try {
+                const event = new MouseEvent(evtName, {
+                    bubbles: true,
+                    cancelable: true,
+                    view: window
+                });
+                el.dispatchEvent(event);
+            } catch (e) {}
+        });
+
+        if (typeof el.click === 'function') {
+            try { el.click(); } catch (e) {}
+        }
+    }
+
+    let lastClickTime = 0;
+    function triggerNextStep(force = false) {
+        if (!state.active || !state.autoNext) return false;
+        const now = Date.now();
+        const minDelay = force ? 300 : 1500;
+        if (now - lastClickTime < minDelay) return false;
+
+        const targetKeywords = [
+            'ileri', '> ileri', 'ileri >', '>ileri', 'ileri>',
             'devam et', 'devam', 'sonraki ders', 'sonraki konu', 
             'sonraki', 'eğitimi tamamla', 'eğitime başla', 
-            'tamam', 'ok', 'dersi bitir', 'eğitime devam et'
+            'tamam', 'ok', 'dersi bitir', 'eğitime devam et',
+            'next', 'forward', 'continue', 'finish'
         ];
 
-        const buttons = Array.from(document.querySelectorAll('button, a, input[type="button"], input[type="submit"], .btn'));
+        const primarySelectors = 'button, a, input[type="button"], input[type="submit"], input[type="image"], [role="button"], [onclick], .btn, .button, .next, .btn-next, .next-btn, [class*="next"], [class*="forward"], [class*="ileri"], [id*="next"], [id*="ileri"], ion-button, mat-button, [data-action="next"], .paginate_next, .step-next';
 
-        for (const btn of buttons) {
-            if (btn.offsetParent === null || btn.disabled) continue;
+        const docs = [document];
+        try {
+            document.querySelectorAll('iframe, frame').forEach(iframe => {
+                try {
+                    const iDoc = iframe.contentDocument || (iframe.contentWindow && iframe.contentWindow.document);
+                    if (iDoc) docs.push(iDoc);
+                } catch (e) {}
+            });
+        } catch (e) {}
 
-            const text = (btn.innerText || btn.textContent || btn.value || '').trim().toLowerCase();
-            const matches = targetTexts.some(t => text === t || text.includes(t));
-            if (matches) {
-                lastClickTime = now;
-                addLog(`👉 Butona tıklandı: "${text.toUpperCase()}"`);
-                btn.click();
-                return true;
+        for (const doc of docs) {
+            let primaryElements = [];
+            try {
+                primaryElements = Array.from(doc.querySelectorAll(primarySelectors));
+            } catch (e) {}
+
+            let secondaryElements = [];
+            try {
+                secondaryElements = Array.from(doc.querySelectorAll('span, div, p, li, td, a, button'));
+            } catch (e) {}
+
+            const allElements = Array.from(new Set([...primaryElements, ...secondaryElements]));
+
+            for (const el of allElements) {
+                if (!isElementVisible(el)) continue;
+
+                const rawText = (el.innerText || el.textContent || el.value || el.getAttribute('aria-label') || el.getAttribute('title') || '').trim();
+                if (!rawText || rawText.length > 60) continue; // Container skip
+
+                const normText = normalizeText(rawText);
+                const rawLower = rawText.toLowerCase().replace(/\s+/g, ' ');
+
+                const classOrId = ((el.className || '') + ' ' + (el.id || '')).toLowerCase();
+                const textMatch = targetKeywords.some(kw => normText === kw || normText.includes(kw) || rawLower.includes(kw));
+                const classMatch = (classOrId.includes('next') || classOrId.includes('ileri') || classOrId.includes('forward')) && !classOrId.includes('previous') && !classOrId.includes('prev') && !classOrId.includes('geri');
+
+                if (textMatch || classMatch) {
+                    const clickableEl = el.closest('button, a, [role="button"], [onclick], .btn') || el;
+                    lastClickTime = now;
+                    addLog(`👉 Butona tıklandı: "${rawText.toUpperCase() || 'İLERİ'}"`);
+                    clickElement(clickableEl);
+                    return true;
+                }
+            }
+
+            // Modal onay butonları
+            const modalButtons = doc.querySelectorAll('.modal button, .swal2-confirm, .ngx-modal button, [class*="swal2-confirm"]');
+            for (const mBtn of modalButtons) {
+                if (isElementVisible(mBtn)) {
+                    lastClickTime = now;
+                    addLog(`👉 Modal onay butonuna tıklandı: "${mBtn.innerText || 'ONAY'}"`);
+                    clickElement(mBtn);
+                    return true;
+                }
             }
         }
 
-        const modalButtons = document.querySelectorAll('.modal button, .swal2-confirm, .ngx-modal button');
-        modalButtons.forEach(mBtn => {
-            if (!mBtn.disabled && mBtn.offsetParent !== null) {
-                lastClickTime = now;
-                addLog(`👉 Modal onay butonuna tıklandı: "${mBtn.innerText}"`);
-                mBtn.click();
+        return false;
+    }
+
+    function checkZeroTimer() {
+        if (!state.active || !state.autoNext) return false;
+        try {
+            const docs = [document];
+            document.querySelectorAll('iframe, frame').forEach(iframe => {
+                try {
+                    const iDoc = iframe.contentDocument || (iframe.contentWindow && iframe.contentWindow.document);
+                    if (iDoc) docs.push(iDoc);
+                } catch (e) {}
+            });
+
+            for (const doc of docs) {
+                const txt = (doc.body ? doc.body.innerText : '').toLowerCase();
+                if (/00\s*:\s*00|0\s*:\s*00|00\s*:\s*00\s*:\s*00|0\s*sn|0\s*saniye|süre\s*bitti|süreniz\s*doldu/i.test(txt)) {
+                    triggerNextStep(true);
+                    return true;
+                }
             }
-        });
+        } catch (e) {}
+        return false;
     }
 
     function checkEducationListPage() {
         if (!state.active || !window.location.href.includes('/my-educations')) return;
 
-        const startBtns = Array.from(document.querySelectorAll('button, a'))
+        const startBtns = Array.from(document.querySelectorAll('button, a, [role="button"], .btn'))
             .filter(el => {
-                const txt = (el.innerText || '').toLowerCase();
-                return (txt.includes('eğitime başla') || txt.includes('eğitime devam et') || txt.includes('başla')) && el.offsetParent !== null;
+                if (!isElementVisible(el)) return false;
+                const txt = normalizeText(el.innerText || el.textContent || '');
+                return txt.includes('basla') || txt.includes('başla') || txt.includes('devam');
             });
 
         if (startBtns.length > 0) {
             addLog(`📚 ${startBtns.length} ders bulundu. Eğitime başlanıyor...`);
             setTimeout(() => {
-                if (state.active) startBtns[0].click();
+                if (state.active) clickElement(startBtns[0]);
             }, 2000);
         }
+    }
+
+    let lastTimerLoggedStr = '';
+    let lastTimerLoggedTime = 0;
+
+    function trackLiveStatus() {
+        if (!state.active) return;
+        const now = Date.now();
+
+        // 1. Ders Başlığı Tespiti
+        try {
+            const headingEl = document.querySelector('h1, h2, h3, .card-header, .lesson-title, header, .breadcrumb');
+            if (headingEl && headingEl.innerText) {
+                const title = headingEl.innerText.trim().replace(/\s+/g, ' ');
+                if (title && title.length < 80 && state.currentLesson !== title) {
+                    state.currentLesson = title;
+                    addLog(`📖 Ders: "${title}"`);
+                }
+            }
+        } catch(e) {}
+
+        // 2. Kalan Zaman / Sayaç Tespiti
+        try {
+            const pageText = document.body ? document.body.innerText : '';
+            const matches = pageText.match(/(?:kalan zaman|kalan süre|süre|sayaç)?\s*:?\s*(\d{1,2}:\d{2})/i);
+            if (matches && matches[1]) {
+                const timerStr = matches[1];
+                if (timerStr !== '00:00' && (timerStr !== lastTimerLoggedStr || (now - lastTimerLoggedTime > 4000))) {
+                    lastTimerLoggedStr = timerStr;
+                    lastTimerLoggedTime = now;
+                    addLog(`⏳ Kalan Zaman: ${timerStr}`);
+                }
+            }
+        } catch(e) {}
+
+        // 3. Video Oynatma İlerleme Tespiti
+        try {
+            const videos = document.querySelectorAll('video');
+            videos.forEach((v, idx) => {
+                if (v.duration > 0 && !v.paused && !v.ended) {
+                    if (!v._lastLoggedTime || (now - v._lastLoggedTime > 5000)) {
+                        v._lastLoggedTime = now;
+                        const cur = formatSec(v.currentTime);
+                        const dur = formatSec(v.duration);
+                        const pct = Math.floor((v.currentTime / v.duration) * 100);
+                        addLog(`▶️ Video ${idx + 1}: ${cur} / ${dur} (%${pct}) [${state.speed}x]`);
+                    }
+                }
+            });
+        } catch(e) {}
+    }
+
+    function formatSec(seconds) {
+        if (!seconds || isNaN(seconds)) return '00:00';
+        const m = Math.floor(seconds / 60);
+        const s = Math.floor(seconds % 60);
+        return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
     }
 
     function init() {
@@ -366,9 +557,11 @@
         setInterval(() => {
             if (!state.active) return;
             handleVideos();
+            trackLiveStatus();
+            checkZeroTimer();
             triggerNextStep();
             checkEducationListPage();
-        }, 1500);
+        }, 800);
     }
 
     if (document.readyState === 'complete' || document.readyState === 'interactive') {

@@ -150,6 +150,23 @@ class ADBAutomationEngine:
                                 self.page.evaluate("(v) => v.play()", video.element_handle())
                                 self.log(f"▶️ Video {i+1} oynatılıyor ({self.playback_speed}x hızında).")
 
+                            # Periodic progress log (every 5 seconds)
+                            video_info = self.page.evaluate("""(v) => {
+                                if (!v || !v.duration || v.paused || v.ended) return null;
+                                const cur = Math.floor(v.currentTime);
+                                const dur = Math.floor(v.duration);
+                                const pct = Math.floor((v.currentTime / v.duration) * 100);
+                                return { cur, dur, pct };
+                            }""", video.element_handle())
+
+                            if video_info:
+                                now_t = time.time()
+                                if not hasattr(self, '_last_video_log') or (now_t - getattr(self, '_last_video_log', 0) > 5.0):
+                                    cur_str = f"{video_info['cur']//60:02d}:{video_info['cur']%60:02d}"
+                                    dur_str = f"{video_info['dur']//60:02d}:{video_info['dur']%60:02d}"
+                                    self.log(f"▶️ Video {i+1} İlerlemesi: {cur_str} / {dur_str} (%{video_info['pct']}) [{self.playback_speed}x]")
+                                    self._last_video_log = now_t
+
                             # Check if ended
                             is_ended = self.page.evaluate("(v) => v.ended", video.element_handle())
                             if is_ended and self.auto_next:
@@ -176,63 +193,129 @@ class ADBAutomationEngine:
 
             time.sleep(1.5)
 
+    @staticmethod
+    def normalize_text(text: str) -> str:
+        if not text:
+            return ""
+        text = (text.replace("İ", "i")
+                    .replace("I", "ı")
+                    .replace("Ğ", "g")
+                    .replace("Ü", "u")
+                    .replace("Ş", "s")
+                    .replace("Ö", "o")
+                    .replace("Ç", "c"))
+        text = text.lower().replace(">", "").replace("<", "").strip()
+        return re.sub(r'\s+', ' ', text)
+
     def _check_timer_counter(self):
         """Sayfadaki geri sayım sayacını ('Kalan Zaman: 00:06') kontrol eder."""
         try:
-            page_text = self.page.locator("body").inner_text()
-            matches = re.findall(r'(?:kalan zaman|kalan süre|süre|sayaç)?\s*:?\s*(\d{1,2}:\d{2}|\d+\s*sn|\d+\s*saniye)', page_text, re.IGNORECASE)
-            if matches:
-                timer_str = matches[0]
-                if not hasattr(self, '_last_timer_logged') or time.time() - getattr(self, '_last_timer_logged', 0) > 4.0:
-                    self.log(f"⏳ Kalan Zaman: {timer_str} (Süre bitince otomatik 'İleri' butonuna basılacak)...")
-                    self._last_timer_logged = time.time()
+            for frame in self.page.frames:
+                try:
+                    page_text = frame.locator("body").inner_text()
+                    matches = re.findall(r'(?:kalan zaman|kalan süre|süre|sayaç)?\s*:?\s*(\d{1,2}:\d{2}|\d+\s*sn|\d+\s*saniye)', page_text, re.IGNORECASE)
+                    if matches:
+                        timer_str = matches[0]
+                        if "00:00" in timer_str or "0:00" in timer_str:
+                            self.log(f"⚡ Geri sayım tamamlandı ({timer_str}). Otomatik '> İleri' butonuna basılıyor...")
+                            self._trigger_next_button(force=True)
+                        elif not hasattr(self, '_last_timer_logged') or time.time() - getattr(self, '_last_timer_logged', 0) > 4.0:
+                            self.log(f"⏳ Kalan Zaman: {timer_str} (Süre bitince otomatik 'İleri' butonuna basılacak)...")
+                            self._last_timer_logged = time.time()
+                except Exception:
+                    pass
         except Exception:
             pass
 
-    def _trigger_next_button(self) -> bool:
-        """Ekranda aktif olan 'İleri / Devam Et / Sonraki Ders' butonlarını bulur ve tıklar."""
+    def _trigger_next_button(self, force: bool = False) -> bool:
+        """Ekranda aktif olan '> İleri / Devam Et / Sonraki Ders' butonlarını tüm çerçevelerde bulur ve tıklar."""
         if not self.page:
             return False
 
-        target_texts = [
-            'ileri', '> ileri', 'ileri >', '>ileri',
-            'devam et', 'devam', 'sonraki ders', 'sonraki konu', 
-            'sonraki', 'eğitimi tamamla', 'eğitime başla', 
-            'tamam', 'ok', 'dersi bitir', 'eğitime devam et'
+        now = time.time()
+        min_delay = 0.3 if force else 1.5
+        if hasattr(self, '_last_click_time') and (now - getattr(self, '_last_click_time', 0) < min_delay):
+            return False
+
+        target_keywords = [
+            'ileri', '> ileri', 'ileri >', '>ileri', 'ileri>',
+            'devam', 'sonraki', 'tamamla', 'başla', 
+            'tamam', 'ok', 'bitir', 'next', 'forward', 'continue', 'finish'
         ]
 
+        primary_selectors = "button, a, input[type='button'], input[type='submit'], input[type='image'], [role='button'], [onclick], .btn, .button, .next, .btn-next, .next-btn, [class*='next'], [class*='forward'], [class*='ileri'], [id*='next'], [id*='ileri'], ion-button, mat-button, [data-action='next'], .paginate_next, .step-next"
+
         try:
-            buttons = self.page.locator("button, a, input[type='button'], input[type='submit'], .btn").all()
-            for btn in buttons:
-                if not btn.is_visible():
+            frames = self.page.frames
+            for frame in frames:
+                try:
+                    primary_btns = frame.locator(primary_selectors).all()
+                    secondary_btns = frame.locator("span, div, p, li, td, a, button").all()
+                    
+                    all_btns = primary_btns + secondary_btns
+                    
+                    for btn in all_btns:
+                        try:
+                            if not btn.is_visible():
+                                continue
+
+                            raw_text = (btn.inner_text() or btn.get_attribute("value") or btn.get_attribute("aria-label") or btn.get_attribute("title") or "").strip()
+                            if not raw_text or len(raw_text) > 60:
+                                continue
+
+                            norm_text = self.normalize_text(raw_text)
+                            raw_lower = raw_text.lower().replace(" ", "")
+
+                            btn_class = (btn.get_attribute("class") or "").lower()
+                            btn_id = (btn.get_attribute("id") or "").lower()
+                            class_or_id = f"{btn_class} {btn_id}"
+
+                            text_match = any(kw in norm_text or kw in raw_lower for kw in target_keywords)
+                            class_match = ("next" in class_or_id or "ileri" in class_or_id or "forward" in class_or_id) and not ("prev" in class_or_id or "geri" in class_or_id)
+
+                            if text_match or class_match:
+                                self._last_click_time = now
+                                display_label = raw_text.upper() if raw_text else "İLERİ"
+                                self.log(f"👉 Otomatik İlerleme: '{display_label}' butonuna tıklandı!")
+
+                                try:
+                                    frame.evaluate("""(el) => {
+                                        let clickable = el.closest('button, a, [role="button"], [onclick], .btn') || el;
+                                        clickable.removeAttribute('disabled');
+                                        clickable.classList.remove('disabled', 'is-disabled');
+                                        clickable.setAttribute('aria-disabled', 'false');
+                                        clickable.style.pointerEvents = 'auto';
+                                    }""", btn.element_handle())
+                                except Exception:
+                                    pass
+
+                                try:
+                                    btn.click(force=True, timeout=1500)
+                                except Exception:
+                                    frame.evaluate("""(el) => {
+                                        let clickable = el.closest('button, a, [role="button"], [onclick], .btn') || el;
+                                        ['pointerdown', 'mousedown', 'mouseup', 'click'].forEach(evtName => {
+                                            clickable.dispatchEvent(new MouseEvent(evtName, { bubbles: true, cancelable: true, view: window }));
+                                        });
+                                        if (typeof clickable.click === 'function') clickable.click();
+                                    }""", btn.element_handle())
+
+                                return True
+                        except Exception:
+                            continue
+
+                    # Modal onay dialogları
+                    modals = frame.locator(".modal button, .swal2-confirm, .ngx-modal button, [class*='swal2-confirm']").all()
+                    for mbtn in modals:
+                        if mbtn.is_visible():
+                            self.log(f"👉 Modal onay butonuna tıklandı: '{mbtn.inner_text()}'")
+                            try:
+                                mbtn.click(force=True, timeout=1500)
+                            except Exception:
+                                frame.evaluate("(el) => el.click()", mbtn.element_handle())
+                            return True
+                except Exception:
                     continue
-
-                raw_text = (btn.inner_text() or btn.get_attribute("value") or "").strip()
-                clean_text = raw_text.lower().replace(">", "").strip()
-
-                if any(t == clean_text or t in clean_text for t in ['ileri', 'devam', 'sonraki', 'tamamla', 'başla', 'tamam', 'ok', 'bitir']):
-                    # Disabled kontrolü
-                    is_disabled = self.page.evaluate("""(el) => {
-                        return el.disabled || el.classList.contains('disabled') || getComputedStyle(el).pointerEvents === 'none';
-                    }""", btn.element_handle())
-
-                    if is_disabled:
-                        # Geri sayım henüz bitmedi (buton kilitli)
-                        continue
-
-                    self.log(f"👉 Otomatik İlerleme: '{raw_text.upper()}' butonuna tıklandı!")
-                    btn.click()
-                    return True
-
-            # Modal onay dialogları
-            modals = self.page.locator(".modal button, .swal2-confirm, .ngx-modal button").all()
-            for mbtn in modals:
-                if mbtn.is_visible():
-                    is_disabled = self.page.evaluate("(el) => el.disabled || el.classList.contains('disabled')", mbtn.element_handle())
-                    if not is_disabled:
-                        self.log(f"👉 Modal onay butonuna tıklandı: '{mbtn.inner_text()}'")
-                        mbtn.click()
-                        return True
         except Exception:
             pass
 
@@ -241,16 +324,24 @@ class ADBAutomationEngine:
     def _check_education_list(self):
         """Kayıtlı eğitimler listesinde başlanmamış/tamamlanmamış eğitime tıklar."""
         try:
-            btns = self.page.locator("button, a").all()
-            for btn in btns:
-                if not btn.is_visible():
+            for frame in self.page.frames:
+                try:
+                    btns = frame.locator("button, a, [role='button'], .btn").all()
+                    for btn in btns:
+                        if not btn.is_visible():
+                            continue
+                        raw = (btn.inner_text() or btn.get_attribute("value") or "").strip()
+                        norm = self.normalize_text(raw)
+                        if "basla" in norm or "başla" in norm or "devam" in norm:
+                            self.log(f"📚 Bulunan eğitime başlanıyor: '{raw}'")
+                            try:
+                                btn.click(force=True, timeout=2000)
+                            except Exception:
+                                frame.evaluate("(el) => el.click()", btn.element_handle())
+                            time.sleep(2)
+                            return
+                except Exception:
                     continue
-                txt = (btn.inner_text() or "").strip().lower()
-                if "eğitime başla" in txt or "eğitime devam et" in txt:
-                    self.log(f"📚 Bulunan eğitime başlanıyor: '{txt}'")
-                    btn.click()
-                    time.sleep(2)
-                    break
         except Exception:
             pass
 

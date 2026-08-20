@@ -1,4 +1,5 @@
 @echo off
+set PYTHONDONTWRITEBYTECODE=1
 title ADB Otomatik Egitim Izleme Uygulamasi
 echo ========================================================
 echo   ADB (adbs.uab.gov.tr) OTOMATIK EGITIM IZLEYICI

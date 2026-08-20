@@ -15,7 +15,8 @@
     {
       "matches": ["https://adbs.uab.gov.tr/*"],
       "js": ["content.js"],
-      "run_at": "document_end"
+      "run_at": "document_end",
+      "all_frames": true
     }
   ],
   "action": {
