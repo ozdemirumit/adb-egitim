@@ -655,19 +655,37 @@
         return container;
     }
 
-    let currentPageCaptured = false;
+    // Sadece gerçek ders içeriği sayfası (.../my-educations/<id>/join) yakalanır;
+    // kurs tanıtım/özet sayfası (.../my-educations/<id>) hariç tutulur.
+    function isLessonContentPage() {
+        return /\/my-educations\/\d+\/join/.test(window.location.pathname);
+    }
 
-    function capturePageForDoc() {
-        if (currentPageCaptured) return;
-        if (!window.location.pathname.includes('/my-educations/')) return;
+    const attemptedLessonTitles = new Set();
+    let lastSeenLessonTitle = '';
 
-        const headingEl = document.querySelector('h1, h2, h3, .card-header, .lesson-title');
-        const title = ((headingEl && headingEl.innerText) || document.title || 'Sayfa').trim().replace(/\s+/g, ' ');
+    // Bu site dersler arası geçişte URL'yi değiştirmiyor (SPA); bu yüzden yakalama
+    // sayfa yüklenmesine değil, başlık değişimine bağlı tetiklenir.
+    function trackLessonForCapture() {
+        if (!isLessonContentPage()) return;
+        try {
+            const headingEl = document.querySelector('h1, h2, h3, .card-header, .lesson-title');
+            const title = ((headingEl && headingEl.innerText) || '').trim().replace(/\s+/g, ' ');
+            if (title && title.length < 120 && title !== lastSeenLessonTitle) {
+                lastSeenLessonTitle = title;
+                capturePageForDoc(title);
+            }
+        } catch (e) {}
+    }
+
+    function capturePageForDoc(title) {
+        if (!title || attemptedLessonTitles.has(title)) return;
+
         const container = getLessonContentContainer();
         const textLen = (container.innerText || '').trim().length;
         if (textLen < 20) return; // Sayfa henüz tam render olmamış olabilir, sonraki tick'te tekrar denenecek
 
-        currentPageCaptured = true;
+        attemptedLessonTitles.add(title);
         embedImages(container).then((withImages) => {
             saveDocPage(title, withImages.innerHTML);
         }).catch(() => {
@@ -678,7 +696,7 @@
     function saveDocPage(title, html) {
         if (!isContextValid() || !chrome.storage || !chrome.storage.local) return;
         const courseId = getCourseId();
-        const pageKey = window.location.pathname + window.location.search;
+        const pageKey = title; // Bu sitede ders başına URL değişmiyor; tekilleştirme başlığa göre yapılır
         const storageKey = 'adb_docs_' + courseId;
         try {
             chrome.storage.local.get([storageKey], (res) => {
@@ -770,7 +788,7 @@ ${bodyHtml}
                 addLog('⚠️ Eklenti güncellendi. Otomasyonun devam etmesi için sayfayı yenileyin (F5).');
                 return;
             }
-            capturePageForDoc(); // Otomasyon kapalıyken de sayfa gezintisi belgeye eklensin
+            trackLessonForCapture(); // Otomasyon kapalıyken de ders gezintisi belgeye eklensin
             if (!state.active) return;
             handleVideos();
             trackLiveStatus();
