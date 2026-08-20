@@ -345,14 +345,16 @@
         return false;
     }
 
-    function clickElement(el) {
+    function clickElement(el, force = false) {
         if (!el) return;
-        try {
-            el.removeAttribute('disabled');
-            el.classList.remove('disabled', 'is-disabled', 'btn-disabled');
-            el.setAttribute('aria-disabled', 'false');
-            el.style.pointerEvents = 'auto';
-        } catch (e) {}
+        if (force) {
+            try {
+                el.removeAttribute('disabled');
+                el.classList.remove('disabled', 'is-disabled', 'btn-disabled');
+                el.setAttribute('aria-disabled', 'false');
+                el.style.pointerEvents = 'auto';
+            } catch (e) {}
+        }
 
         if (el.tagName === 'A' && el.href && el.href.startsWith('javascript:')) {
             try {
@@ -433,9 +435,11 @@
 
                 if (textMatch || classMatch) {
                     const clickableEl = el.closest('button, a, [role="button"], [onclick], .btn') || el;
+                    if (isElementDisabled(clickableEl) && !force) continue; // Süre dolmadan kilitli butonu atla
+
                     lastClickTime = now;
                     addLog(`👉 Butona tıklandı: "${rawText.toUpperCase() || 'İLERİ'}"`);
-                    clickElement(clickableEl);
+                    clickElement(clickableEl, force);
                     return true;
                 }
             }
@@ -443,10 +447,10 @@
             // Modal onay butonları
             const modalButtons = doc.querySelectorAll('.modal button, .swal2-confirm, .ngx-modal button, [class*="swal2-confirm"]');
             for (const mBtn of modalButtons) {
-                if (isElementVisible(mBtn)) {
+                if (isElementVisible(mBtn) && (force || !isElementDisabled(mBtn))) {
                     lastClickTime = now;
                     addLog(`👉 Modal onay butonuna tıklandı: "${mBtn.innerText || 'ONAY'}"`);
-                    clickElement(mBtn);
+                    clickElement(mBtn, force);
                     return true;
                 }
             }
