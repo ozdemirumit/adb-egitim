@@ -497,6 +497,18 @@
         }, delay);
     }
 
+    // Sadece "Kalan Zaman:"/"Kalan Süre:" etiketli sayacı okur; sayfadaki alakasız
+    // d:dd desenlerini (ör. gizli bir video oynatıcının süre göstergesi) yok sayar.
+    function getLabeledCountdownText(doc) {
+        try {
+            const pageText = (doc && doc.body) ? doc.body.innerText : '';
+            const m = pageText.match(/(?:kalan zaman|kalan süre)\s*:?\s*(\d{1,2}:\d{2})/i);
+            return m ? m[1] : null;
+        } catch (e) {
+            return null;
+        }
+    }
+
     function checkZeroTimer() {
         if (!state.active || !state.autoNext) return false;
         if (clickScheduled) return false;
@@ -510,8 +522,8 @@
             });
 
             for (const doc of docs) {
-                const txt = (doc.body ? doc.body.innerText : '').toLowerCase();
-                if (/00\s*:\s*00|0\s*:\s*00|00\s*:\s*00\s*:\s*00|0\s*sn|0\s*saniye|süre\s*bitti|süreniz\s*doldu/i.test(txt)) {
+                const timerStr = getLabeledCountdownText(doc);
+                if (timerStr === '00:00' || timerStr === '0:00') {
                     scheduleDelayedClick('Süre doldu.');
                     return true;
                 }
@@ -560,10 +572,8 @@
 
         // 2. Kalan Zaman / Sayaç Tespiti
         try {
-            const pageText = document.body ? document.body.innerText : '';
-            const matches = pageText.match(/(?:kalan zaman|kalan süre|süre|sayaç)?\s*:?\s*(\d{1,2}:\d{2})/i);
-            if (matches && matches[1]) {
-                const timerStr = matches[1];
+            const timerStr = getLabeledCountdownText(document);
+            if (timerStr) {
                 if (timerStr !== '00:00') {
                     activeCountdownUntil = now + 2000; // Sayaç görülmeye devam ettikçe pencereyi tazele
                     if (timerStr !== lastTimerLoggedStr || (now - lastTimerLoggedTime > 4000)) {
@@ -663,17 +673,46 @@
 
     const attemptedLessonTitles = new Set();
     let lastSeenLessonTitle = '';
+    let lastCaptureDiagLog = 0;
+    let lastGuessAttempt = 0;
+    const LESSON_TITLE_SELECTOR = 'h1, h2, h3, h4, .card-header, .lesson-title, .page-title, [class*="lesson-name"], [class*="lesson-title"]';
+
+    // Site heading etiketi kullanmıyorsa: içerik alanındaki ilk kısa, "yaprak" (alt elementi
+    // olmayan) metin bloğunu başlık olarak dener - ekran görüntülerinde "EMNİYET TEÇHİZATI"
+    // gibi kalın metinler tam olarak bu şekilde görünüyor.
+    function guessContentTitle(container) {
+        try {
+            const candidates = container.querySelectorAll('*');
+            for (const el of candidates) {
+                if (el.children.length > 0) continue;
+                const text = (el.innerText || el.textContent || '').trim();
+                if (text.length > 2 && text.length < 80) {
+                    return text.replace(/\s+/g, ' ');
+                }
+            }
+        } catch (e) {}
+        return '';
+    }
 
     // Bu site dersler arası geçişte URL'yi değiştirmiyor (SPA); bu yüzden yakalama
     // sayfa yüklenmesine değil, başlık değişimine bağlı tetiklenir.
     function trackLessonForCapture() {
         if (!isLessonContentPage()) return;
         try {
-            const headingEl = document.querySelector('h1, h2, h3, .card-header, .lesson-title');
-            const title = ((headingEl && headingEl.innerText) || '').trim().replace(/\s+/g, ' ');
+            const headingEl = document.querySelector(LESSON_TITLE_SELECTOR);
+            let title = ((headingEl && headingEl.innerText) || '').trim().replace(/\s+/g, ' ');
+
+            if (!title && Date.now() - lastGuessAttempt > 3000) {
+                lastGuessAttempt = Date.now();
+                title = guessContentTitle(getLessonContentContainer());
+            }
+
             if (title && title.length < 120 && title !== lastSeenLessonTitle) {
                 lastSeenLessonTitle = title;
                 capturePageForDoc(title);
+            } else if (!title && Date.now() - lastCaptureDiagLog > 8000) {
+                lastCaptureDiagLog = Date.now();
+                addLog('🔍 Ders başlığı bulunamadı, belge yakalanamıyor.');
             }
         } catch (e) {}
     }
