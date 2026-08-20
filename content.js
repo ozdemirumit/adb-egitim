@@ -12,20 +12,31 @@
         logs: []
     };
 
+    function isContextValid() {
+        try {
+            return typeof chrome !== 'undefined' && !!chrome.runtime && !!chrome.runtime.id;
+        } catch (e) {
+            return false;
+        }
+    }
+
     // Load initial settings
-    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-        chrome.storage.local.get(['adb_active', 'adb_speed', 'adb_autoNext', 'adb_antiBlur', 'adb_mute'], (res) => {
-            if (res.adb_active !== undefined) state.active = res.adb_active;
-            if (res.adb_speed !== undefined) state.speed = res.adb_speed;
-            if (res.adb_autoNext !== undefined) state.autoNext = res.adb_autoNext;
-            if (res.adb_antiBlur !== undefined) state.antiBlur = res.adb_antiBlur;
-            if (res.adb_mute !== undefined) state.mute = res.adb_mute;
-            updateUI();
-        });
+    if (isContextValid() && chrome.storage && chrome.storage.local) {
+        try {
+            chrome.storage.local.get(['adb_active', 'adb_speed', 'adb_autoNext', 'adb_antiBlur', 'adb_mute'], (res) => {
+                if (res.adb_active !== undefined) state.active = res.adb_active;
+                if (res.adb_speed !== undefined) state.speed = res.adb_speed;
+                if (res.adb_autoNext !== undefined) state.autoNext = res.adb_autoNext;
+                if (res.adb_antiBlur !== undefined) state.antiBlur = res.adb_antiBlur;
+                if (res.adb_mute !== undefined) state.mute = res.adb_mute;
+                updateUI();
+            });
+        } catch (e) {}
     }
 
     function saveState() {
-        if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+        if (!isContextValid() || !chrome.storage || !chrome.storage.local) return;
+        try {
             chrome.storage.local.set({
                 adb_active: state.active,
                 adb_speed: state.speed,
@@ -33,7 +44,7 @@
                 adb_antiBlur: state.antiBlur,
                 adb_mute: state.mute
             });
-        }
+        } catch (e) {}
     }
 
     function addLog(msg) {
@@ -562,7 +573,12 @@
 
     function init() {
         createUI();
-        setInterval(() => {
+        let mainInterval = setInterval(() => {
+            if (!isContextValid()) {
+                clearInterval(mainInterval);
+                addLog('⚠️ Eklenti güncellendi. Otomasyonun devam etmesi için sayfayı yenileyin (F5).');
+                return;
+            }
             if (!state.active) return;
             handleVideos();
             trackLiveStatus();
