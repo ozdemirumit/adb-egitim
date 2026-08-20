@@ -680,8 +680,9 @@
 
     // Bu sitede (DevExtreme akordeon) her ders "li.list-group-item" içinde:
     // <span class="item-label">Ders N :</span><a disabled="true|false" class="...text-muted..."><b>Ders Adı</b></a>
-    // Tamamlanan/görülen dersler disabled="false" (göz ikonlu); o an açık/henüz bitmemiş olan
-    // dersler disabled="true" (soluk). Sıradaki ilk kilitli ders = o an izlenen derstir.
+    // Tamamlanan dersler disabled="false" (göz ikonlu); o an açık olan ders ise henüz
+    // tamamlanmadığından disabled="true" (soluk) - sıradaki ilk kilitli ders, o an izlenen derstir.
+    // (Doğrulandı: gerçek testte "ilk kilitli ders" ekrandaki içerikle eşleşti.)
     function getCurrentLessonFromSidebar() {
         try {
             const items = document.querySelectorAll('li.list-group-item');
@@ -690,11 +691,10 @@
                 const bEl = li.querySelector('b');
                 if (!link || !bEl) continue;
                 const isLocked = link.getAttribute('disabled') === 'true' || link.classList.contains('text-muted');
-                if (isLocked) {
+                if (isLocked && bEl.textContent.trim()) {
                     const label = li.querySelector('.item-label');
                     const dersNo = (label ? label.textContent.trim() : '').replace(/\s*:\s*$/, '');
                     const name = bEl.textContent.trim();
-                    if (!name) continue;
                     return (dersNo ? dersNo + ': ' : '') + name;
                 }
             }
@@ -750,18 +750,20 @@
         if (!title || attemptedLessonTitles.has(title)) return;
 
         const container = getLessonContentContainer();
-        const textLen = (container.innerText || '').trim().length;
-        if (textLen < 20) return; // Sayfa henüz tam render olmamış olabilir, sonraki tick'te tekrar denenecek
+        const containerText = (container.innerText || '').trim();
+        if (containerText.length < 20) return; // Sayfa henüz tam render olmamış olabilir, sonraki tick'te tekrar denenecek
+
+        const preview = containerText.slice(0, 60).replace(/\s+/g, ' ');
 
         attemptedLessonTitles.add(title);
         embedImages(container).then((withImages) => {
-            saveDocPage(title, withImages.innerHTML);
+            saveDocPage(title, withImages.innerHTML, preview);
         }).catch(() => {
-            saveDocPage(title, container.innerHTML);
+            saveDocPage(title, container.innerHTML, preview);
         });
     }
 
-    function saveDocPage(title, html) {
+    function saveDocPage(title, html, preview) {
         if (!isContextValid() || !chrome.storage || !chrome.storage.local) return;
         const courseId = getCourseId();
         const pageKey = title; // Bu sitede ders başına URL değişmiyor; tekilleştirme başlığa göre yapılır
@@ -775,7 +777,7 @@
                 }
                 pages.push({ pageKey, title, html, capturedAt: Date.now() });
                 chrome.storage.local.set({ [storageKey]: pages }, () => {
-                    addLog(`💾 Sayfa belgeye eklendi: "${title}" (toplam ${pages.length} sayfa)`);
+                    addLog(`💾 Sayfa belgeye eklendi: "${title}" (toplam ${pages.length} sayfa) — içerik: "${preview || '?'}..."`);
                     refreshDocButton();
                 });
             });
