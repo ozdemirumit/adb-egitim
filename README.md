@@ -27,6 +27,7 @@ T.C. Ulaştırma ve Altyapı Bakanlığı **Amatör Denizci Eğitim ve Başvuru 
 - 🛡️ **Sekme Odağı Koruması (Anti-Blur):** Başka bir sekmede çalışırken veya pencere küçültüldüğünde platformun videoyu durdurmasını engeller.
 - 🔇 **Sessiz Mod (Mute):** Arka planda videoları sessiz olarak çalıştırma imkanı.
 - 🖥️ **Canlı Kontrol Paneli:** Sayfa üzerinde açılan yüzen panelden durum, ders, kalan süre ve video ilerlemesi takip edilir.
+- 📄 **Word'e Aktarma:** Gezilen ders sayfaları (metin, tablo, görsel) arka planda kursa özel biriktirilir; panelden tek tıkla tüm kurs tek bir `.doc` dosyası olarak indirilebilir. Kursa daha sonra devam edilirse aynı dosyaya eklemeye devam eder.
 
 ---
 

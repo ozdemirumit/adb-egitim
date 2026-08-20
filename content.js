@@ -141,6 +141,21 @@
                 background: linear-gradient(135deg, #ef4444, #dc2626);
                 box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
             }
+            .adb-export-btn {
+                width: 100%;
+                padding: 9px;
+                border: 1px solid #334155;
+                border-radius: 10px;
+                font-weight: 700;
+                cursor: pointer;
+                background: #1e293b;
+                color: #38bdf8;
+                font-size: 13px;
+            }
+            .adb-export-btn:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
             .adb-select {
                 background: #1e293b;
                 color: #38bdf8;
@@ -215,6 +230,7 @@
                     <label for="adb-mute-cb">Videoları Sessize Al:</label>
                     <input type="checkbox" class="adb-checkbox" id="adb-mute-cb" ${state.mute ? 'checked' : ''}>
                 </div>
+                <button class="adb-export-btn" id="adb-export-doc" disabled>📄 Word'e Aktar (0 sayfa)</button>
                 <div class="adb-logs" id="adb-logs">
                     <div class="adb-log-entry">🤖 Eklenti hazır. Sayfa taranıyor...</div>
                 </div>
@@ -229,6 +245,9 @@
             addLog(state.active ? '▶️ Otomasyon başlatıldı.' : '⏸️ Otomasyon durduruldu.');
             updateUI();
         };
+
+        document.getElementById('adb-export-doc').onclick = () => exportCourseAsWord();
+        refreshDocButton();
 
         document.getElementById('adb-speed-select').onchange = (e) => {
             state.speed = parseFloat(e.target.value);
@@ -580,6 +599,169 @@
         return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
     }
 
+    // --- Kurs sayfalarını Word belgesi olarak biriktirme ---
+
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str || '';
+        return div.innerHTML;
+    }
+
+    function getCourseId() {
+        const m = window.location.pathname.match(/my-educations\/(\d+)/);
+        return m ? m[1] : 'genel';
+    }
+
+    function getLessonContentContainer() {
+        const container = document.querySelector('main')
+            || document.querySelector('.lesson-content, .content, .card-body, article, .container')
+            || document.body;
+        const clone = container.cloneNode(true);
+        // Kişisel/hesap bilgisi içerebilecek alanları ve otomasyon panelini belgeden çıkar
+        // (özellikle document.body'ye düşen genel sayfa yakalamalarında önemli)
+        clone.querySelectorAll(
+            '#adb-auto-widget, script, style, video, audio, iframe, button, input, select, ' +
+            'nav, aside, header, footer, .sidebar, .navbar, .breadcrumb, ' +
+            '[class*="profile"], [class*="account"], [class*="kullanici"], [class*="user-menu"], [id*="account"]'
+        ).forEach(el => el.remove());
+        return clone;
+    }
+
+    async function embedImages(container) {
+        const imgs = Array.from(container.querySelectorAll('img'));
+        await Promise.all(imgs.map(async (img) => {
+            const src = img.getAttribute('src');
+            if (!src || src.startsWith('data:')) return;
+            let absUrl;
+            try {
+                absUrl = new URL(src, window.location.href).href;
+            } catch (e) {
+                return;
+            }
+            try {
+                const resp = await fetch(absUrl);
+                const blob = await resp.blob();
+                const dataUrl = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(blob);
+                });
+                img.setAttribute('src', dataUrl);
+            } catch (e) {
+                img.setAttribute('src', absUrl);
+            }
+        }));
+        return container;
+    }
+
+    let currentPageCaptured = false;
+
+    function capturePageForDoc() {
+        if (currentPageCaptured) return;
+        if (!window.location.pathname.includes('/my-educations/')) return;
+
+        const headingEl = document.querySelector('h1, h2, h3, .card-header, .lesson-title');
+        const title = ((headingEl && headingEl.innerText) || document.title || 'Sayfa').trim().replace(/\s+/g, ' ');
+        const container = getLessonContentContainer();
+        const textLen = (container.innerText || '').trim().length;
+        if (textLen < 20) return; // Sayfa henüz tam render olmamış olabilir, sonraki tick'te tekrar denenecek
+
+        currentPageCaptured = true;
+        embedImages(container).then((withImages) => {
+            saveDocPage(title, withImages.innerHTML);
+        }).catch(() => {
+            saveDocPage(title, container.innerHTML);
+        });
+    }
+
+    function saveDocPage(title, html) {
+        if (!isContextValid() || !chrome.storage || !chrome.storage.local) return;
+        const courseId = getCourseId();
+        const pageKey = window.location.pathname + window.location.search;
+        const storageKey = 'adb_docs_' + courseId;
+        try {
+            chrome.storage.local.get([storageKey], (res) => {
+                const pages = res[storageKey] || [];
+                if (pages.some(p => p.pageKey === pageKey)) {
+                    refreshDocButton();
+                    return;
+                }
+                pages.push({ pageKey, title, html, capturedAt: Date.now() });
+                chrome.storage.local.set({ [storageKey]: pages }, () => {
+                    addLog(`💾 Sayfa belgeye eklendi: "${title}" (toplam ${pages.length} sayfa)`);
+                    refreshDocButton();
+                });
+            });
+        } catch (e) {}
+    }
+
+    function refreshDocButton() {
+        const btn = document.getElementById('adb-export-doc');
+        if (!btn) return;
+        if (!isContextValid() || !chrome.storage || !chrome.storage.local) return;
+        const storageKey = 'adb_docs_' + getCourseId();
+        try {
+            chrome.storage.local.get([storageKey], (res) => {
+                const count = (res[storageKey] || []).length;
+                btn.textContent = `📄 Word'e Aktar (${count} sayfa)`;
+                btn.disabled = count === 0;
+            });
+        } catch (e) {}
+    }
+
+    function exportCourseAsWord() {
+        if (!isContextValid() || !chrome.storage || !chrome.storage.local) {
+            addLog('⚠️ Dışa aktarma için sayfayı yenileyin.');
+            return;
+        }
+        const courseId = getCourseId();
+        const storageKey = 'adb_docs_' + courseId;
+        try {
+            chrome.storage.local.get([storageKey], (res) => {
+                const pages = res[storageKey] || [];
+                if (!pages.length) {
+                    addLog('⚠️ Henüz kaydedilecek sayfa yok.');
+                    return;
+                }
+
+                const bodyHtml = pages.map(p => `
+                    <h1>${escapeHtml(p.title)}</h1>
+                    ${p.html}
+                    <br clear="all" style="page-break-before:always">
+                `).join('\n');
+
+                const docHtml = `<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8">
+<title>ADB Eğitim Notları</title>
+<style>
+  body { font-family: Calibri, Arial, sans-serif; font-size: 12pt; }
+  h1 { color: #1e3a8a; font-size: 16pt; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+  td, th { border: 1px solid #999; padding: 4px 8px; text-align: left; }
+</style>
+</head>
+<body>
+${bodyHtml}
+</body>
+</html>`;
+
+                const blob = new Blob(['﻿', docHtml], { type: 'application/msword' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ADB_Egitim_Kurs_${courseId}.doc`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 5000);
+                addLog(`📄 Word belgesi indirildi (${pages.length} sayfa).`);
+            });
+        } catch (e) {}
+    }
+
     function init() {
         createUI();
         let mainInterval = setInterval(() => {
@@ -588,6 +770,7 @@
                 addLog('⚠️ Eklenti güncellendi. Otomasyonun devam etmesi için sayfayı yenileyin (F5).');
                 return;
             }
+            capturePageForDoc(); // Otomasyon kapalıyken de sayfa gezintisi belgeye eklensin
             if (!state.active) return;
             handleVideos();
             trackLiveStatus();
