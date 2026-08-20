@@ -376,11 +376,12 @@
     }
 
     let lastClickTime = 0;
-    let zeroTriggerScheduled = false;
+    let clickScheduled = false;
     let activeCountdownUntil = 0; // trackLiveStatus() tarafından güncellenir: sayaç 00:00 değilken dolu olan zaman damgası
 
     function triggerNextStep(force = false) {
         if (!state.active || !state.autoNext) return false;
+        if (!force && clickScheduled) return false; // Zaten rastgele gecikmeyle tıklama bekliyor
         const now = Date.now();
         if (!force && now < activeCountdownUntil) return false; // Sayfada aktif geri sayım varken deneme yapma
         const minDelay = force ? 300 : 1500;
@@ -436,9 +437,13 @@
                     const clickableEl = el.closest('button, a, [role="button"], [onclick], .btn') || el;
                     if (isElementDisabled(clickableEl) && !force) continue; // Süre dolmadan kilitli butonu atla
 
-                    lastClickTime = now;
-                    addLog(`👉 Butona tıklandı: "${rawText.toUpperCase() || 'İLERİ'}"`);
-                    clickElement(clickableEl, force);
+                    if (force) {
+                        lastClickTime = now;
+                        addLog(`👉 Butona tıklandı: "${rawText.toUpperCase() || 'İLERİ'}"`);
+                        clickElement(clickableEl, force);
+                        return true;
+                    }
+                    scheduleDelayedClick('Sonraki adım tespit edildi.');
                     return true;
                 }
             }
@@ -447,9 +452,13 @@
             const modalButtons = doc.querySelectorAll('.modal button, .swal2-confirm, .ngx-modal button, [class*="swal2-confirm"]');
             for (const mBtn of modalButtons) {
                 if (isElementVisible(mBtn) && (force || !isElementDisabled(mBtn))) {
-                    lastClickTime = now;
-                    addLog(`👉 Modal onay butonuna tıklandı: "${mBtn.innerText || 'ONAY'}"`);
-                    clickElement(mBtn, force);
+                    if (force) {
+                        lastClickTime = now;
+                        addLog(`👉 Modal onay butonuna tıklandı: "${mBtn.innerText || 'ONAY'}"`);
+                        clickElement(mBtn, force);
+                        return true;
+                    }
+                    scheduleDelayedClick('Onay penceresi tespit edildi.');
                     return true;
                 }
             }
@@ -458,20 +467,20 @@
         return false;
     }
 
-    function scheduleZeroTrigger() {
-        if (zeroTriggerScheduled) return;
-        zeroTriggerScheduled = true;
+    function scheduleDelayedClick(reasonLabel) {
+        if (clickScheduled) return;
+        clickScheduled = true;
         const delay = 1000 + Math.floor(Math.random() * 4000); // 1-5 sn arası rastgele gecikme
-        addLog(`⏱️ Süre doldu. ${(delay / 1000).toFixed(1)} sn sonra İleri butonuna basılacak...`);
+        addLog(`⏱️ ${reasonLabel} ${(delay / 1000).toFixed(1)} sn sonra butona basılacak...`);
         setTimeout(() => {
+            clickScheduled = false;
             if (state.active && state.autoNext) triggerNextStep(true);
-            zeroTriggerScheduled = false;
         }, delay);
     }
 
     function checkZeroTimer() {
         if (!state.active || !state.autoNext) return false;
-        if (zeroTriggerScheduled) return false;
+        if (clickScheduled) return false;
         try {
             const docs = [document];
             document.querySelectorAll('iframe, frame').forEach(iframe => {
@@ -484,7 +493,7 @@
             for (const doc of docs) {
                 const txt = (doc.body ? doc.body.innerText : '').toLowerCase();
                 if (/00\s*:\s*00|0\s*:\s*00|00\s*:\s*00\s*:\s*00|0\s*sn|0\s*saniye|süre\s*bitti|süreniz\s*doldu/i.test(txt)) {
-                    scheduleZeroTrigger();
+                    scheduleDelayedClick('Süre doldu.');
                     return true;
                 }
             }
@@ -525,7 +534,7 @@
                 if (title && title.length < 80 && state.currentLesson !== title) {
                     state.currentLesson = title;
                     addLog(`📖 Ders: "${title}"`);
-                    zeroTriggerScheduled = false;
+                    clickScheduled = false;
                 }
             }
         } catch(e) {}
