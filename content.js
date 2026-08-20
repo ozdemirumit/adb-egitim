@@ -702,6 +702,31 @@
         return '';
     }
 
+    let courseCompletedLogged = false;
+
+    // Sidebar'daki tüm dersler kilidi açılmış (disabled="false") ise kurs tamamlanmış demektir;
+    // getCurrentLessonFromSidebar() bu durumda '' döner. Liste boşsa (sidebar hiç bulunamadıysa)
+    // yanlış pozitif olmaması için otomasyonu durdurmuyoruz.
+    function checkCourseCompleted() {
+        if (!isLessonContentPage()) return false;
+        try {
+            const items = document.querySelectorAll('li.list-group-item');
+            if (items.length === 0) return false;
+            if (getCurrentLessonFromSidebar() !== '') return false;
+
+            if (!courseCompletedLogged) {
+                courseCompletedLogged = true;
+                state.active = false;
+                saveState();
+                addLog('🏁 Tüm dersler tamamlandı. Otomasyon otomatik durduruldu.');
+                updateUI();
+            }
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
     // Site heading etiketi kullanmıyorsa: içerik alanındaki ilk kısa, "yaprak" (alt elementi
     // olmayan) metin bloğunu başlık olarak dener - ekran görüntülerinde "EMNİYET TEÇHİZATI"
     // gibi kalın metinler tam olarak bu şekilde görünüyor.
@@ -860,6 +885,7 @@ ${bodyHtml}
             }
             trackLessonForCapture(); // Otomasyon kapalıyken de ders gezintisi belgeye eklensin
             if (!state.active) return;
+            if (checkCourseCompleted()) return;
             handleVideos();
             trackLiveStatus();
             checkZeroTimer();
