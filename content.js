@@ -378,6 +378,7 @@
     }
 
     let lastClickTime = 0;
+    let zeroTriggerScheduled = false;
     function triggerNextStep(force = false) {
         if (!state.active || !state.autoNext) return false;
         const now = Date.now();
@@ -454,8 +455,20 @@
         return false;
     }
 
+    function scheduleZeroTrigger() {
+        if (zeroTriggerScheduled) return;
+        zeroTriggerScheduled = true;
+        const delay = 1000 + Math.floor(Math.random() * 4000); // 1-5 sn arası rastgele gecikme
+        addLog(`⏱️ Süre doldu. ${(delay / 1000).toFixed(1)} sn sonra İleri butonuna basılacak...`);
+        setTimeout(() => {
+            if (state.active && state.autoNext) triggerNextStep(true);
+            zeroTriggerScheduled = false;
+        }, delay);
+    }
+
     function checkZeroTimer() {
         if (!state.active || !state.autoNext) return false;
+        if (zeroTriggerScheduled) return false;
         try {
             const docs = [document];
             document.querySelectorAll('iframe, frame').forEach(iframe => {
@@ -468,7 +481,7 @@
             for (const doc of docs) {
                 const txt = (doc.body ? doc.body.innerText : '').toLowerCase();
                 if (/00\s*:\s*00|0\s*:\s*00|00\s*:\s*00\s*:\s*00|0\s*sn|0\s*saniye|süre\s*bitti|süreniz\s*doldu/i.test(txt)) {
-                    triggerNextStep(true);
+                    scheduleZeroTrigger();
                     return true;
                 }
             }
@@ -509,6 +522,7 @@
                 if (title && title.length < 80 && state.currentLesson !== title) {
                     state.currentLesson = title;
                     addLog(`📖 Ders: "${title}"`);
+                    zeroTriggerScheduled = false;
                 }
             }
         } catch(e) {}
