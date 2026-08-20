@@ -632,6 +632,7 @@
         clone.querySelectorAll(
             '#adb-auto-widget, script, style, video, audio, iframe, button, input, select, ' +
             'nav, aside, header, footer, .sidebar, .navbar, .breadcrumb, ' +
+            '.dx-accordion-item, .list-group, [class*="accordion"], ' +
             '[class*="profile"], [class*="account"], [class*="kullanici"], [class*="user-menu"], [id*="account"]'
         ).forEach(el => el.remove());
         return clone;
@@ -677,6 +678,30 @@
     let lastGuessAttempt = 0;
     const LESSON_TITLE_SELECTOR = 'h1, h2, h3, h4, .card-header, .lesson-title, .page-title, [class*="lesson-name"], [class*="lesson-title"]';
 
+    // Bu sitede (DevExtreme akordeon) her ders "li.list-group-item" içinde:
+    // <span class="item-label">Ders N :</span><a disabled="true|false" class="...text-muted..."><b>Ders Adı</b></a>
+    // Tamamlanan/görülen dersler disabled="false" (göz ikonlu); o an açık/henüz bitmemiş olan
+    // dersler disabled="true" (soluk). Sıradaki ilk kilitli ders = o an izlenen derstir.
+    function getCurrentLessonFromSidebar() {
+        try {
+            const items = document.querySelectorAll('li.list-group-item');
+            for (const li of items) {
+                const link = li.querySelector('a');
+                const bEl = li.querySelector('b');
+                if (!link || !bEl) continue;
+                const isLocked = link.getAttribute('disabled') === 'true' || link.classList.contains('text-muted');
+                if (isLocked) {
+                    const label = li.querySelector('.item-label');
+                    const dersNo = (label ? label.textContent.trim() : '').replace(/\s*:\s*$/, '');
+                    const name = bEl.textContent.trim();
+                    if (!name) continue;
+                    return (dersNo ? dersNo + ': ' : '') + name;
+                }
+            }
+        } catch (e) {}
+        return '';
+    }
+
     // Site heading etiketi kullanmıyorsa: içerik alanındaki ilk kısa, "yaprak" (alt elementi
     // olmayan) metin bloğunu başlık olarak dener - ekran görüntülerinde "EMNİYET TEÇHİZATI"
     // gibi kalın metinler tam olarak bu şekilde görünüyor.
@@ -699,8 +724,12 @@
     function trackLessonForCapture() {
         if (!isLessonContentPage()) return;
         try {
-            const headingEl = document.querySelector(LESSON_TITLE_SELECTOR);
-            let title = ((headingEl && headingEl.innerText) || '').trim().replace(/\s+/g, ' ');
+            let title = getCurrentLessonFromSidebar();
+
+            if (!title) {
+                const headingEl = document.querySelector(LESSON_TITLE_SELECTOR);
+                title = ((headingEl && headingEl.innerText) || '').trim().replace(/\s+/g, ' ');
+            }
 
             if (!title && Date.now() - lastGuessAttempt > 3000) {
                 lastGuessAttempt = Date.now();
