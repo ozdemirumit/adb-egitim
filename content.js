@@ -5,7 +5,7 @@
 
     const state = {
         active: true,
-        speed: 2.0,
+        speed: 1.0,
         autoNext: true,
         antiBlur: true,
         mute: true,
@@ -45,22 +45,8 @@
         console.log(`[ADB Extension] ${msg}`);
     }
 
-    function applyAntiBlur() {
-        if (!state.antiBlur) return;
-        try {
-            const script = document.createElement('script');
-            script.textContent = `
-                Object.defineProperty(document, 'hidden', { get: () => false, configurable: true });
-                Object.defineProperty(document, 'visibilityState', { get: () => 'visible', configurable: true });
-                window.onblur = null;
-                document.onvisibilitychange = null;
-            `;
-            (document.head || document.documentElement).appendChild(script);
-            script.remove();
-        } catch (e) {
-            console.warn('[ADB Extension] Anti-blur injection error:', e);
-        }
-    }
+    // Anti-blur override artık antiblur.js (MAIN world content script, bkz. manifest.json) tarafından
+    // sayfa CSP'sinden etkilenmeden uygulanıyor.
 
     let uiContainer = null;
 
@@ -247,7 +233,6 @@
         document.getElementById('adb-anti-blur-cb').onchange = (e) => {
             state.antiBlur = e.target.checked;
             saveState();
-            if (state.antiBlur) applyAntiBlur();
         };
 
         document.getElementById('adb-mute-cb').onchange = (e) => {
@@ -381,9 +366,12 @@
 
     let lastClickTime = 0;
     let zeroTriggerScheduled = false;
+    let activeCountdownUntil = 0; // trackLiveStatus() tarafından güncellenir: sayaç 00:00 değilken dolu olan zaman damgası
+
     function triggerNextStep(force = false) {
         if (!state.active || !state.autoNext) return false;
         const now = Date.now();
+        if (!force && now < activeCountdownUntil) return false; // Sayfada aktif geri sayım varken deneme yapma
         const minDelay = force ? 300 : 1500;
         if (now - lastClickTime < minDelay) return false;
 
@@ -537,10 +525,13 @@
             const matches = pageText.match(/(?:kalan zaman|kalan süre|süre|sayaç)?\s*:?\s*(\d{1,2}:\d{2})/i);
             if (matches && matches[1]) {
                 const timerStr = matches[1];
-                if (timerStr !== '00:00' && (timerStr !== lastTimerLoggedStr || (now - lastTimerLoggedTime > 4000))) {
-                    lastTimerLoggedStr = timerStr;
-                    lastTimerLoggedTime = now;
-                    addLog(`⏳ Kalan Zaman: ${timerStr}`);
+                if (timerStr !== '00:00') {
+                    activeCountdownUntil = now + 2000; // Sayaç görülmeye devam ettikçe pencereyi tazele
+                    if (timerStr !== lastTimerLoggedStr || (now - lastTimerLoggedTime > 4000)) {
+                        lastTimerLoggedStr = timerStr;
+                        lastTimerLoggedTime = now;
+                        addLog(`⏳ Kalan Zaman: ${timerStr}`);
+                    }
                 }
             }
         } catch(e) {}
@@ -570,7 +561,6 @@
     }
 
     function init() {
-        applyAntiBlur();
         createUI();
         setInterval(() => {
             if (!state.active) return;
