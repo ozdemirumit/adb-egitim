@@ -622,19 +622,63 @@
         return m ? m[1] : 'genel';
     }
 
+    // Word oynatılabilir video içeremediği için: canlı <video> elementinden bir kare
+    // yakalayıp durağan görsele çeviriyoruz (klonlanmış <video> üzerinden kare alınamaz,
+    // bu yüzden klonlamadan ÖNCE canlı elementten yapılmalı).
+    function captureVideoFrame(video) {
+        try {
+            if (!video || video.readyState < 2 || !video.videoWidth) return null;
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+            return canvas.toDataURL('image/jpeg', 0.7);
+        } catch (e) {
+            return null; // Farklı origin'den servis edilen video (tainted canvas) veya henüz yüklenmemiş
+        }
+    }
+
     function getLessonContentContainer() {
         const container = document.querySelector('main')
             || document.querySelector('.lesson-content, .content, .card-body, article, .container')
             || document.body;
+
+        // Video kareleri/kaynakları klonlamadan önce canlı elementlerden toplanır
+        const liveVideos = Array.from(container.querySelectorAll('video'));
+        const videoData = {};
+        liveVideos.forEach((v, i) => {
+            v.setAttribute('data-adb-vidx', String(i));
+            const srcEl = v.querySelector('source');
+            videoData[i] = {
+                frame: captureVideoFrame(v),
+                src: v.currentSrc || v.src || (srcEl && srcEl.src) || ''
+            };
+        });
+
         const clone = container.cloneNode(true);
+        liveVideos.forEach(v => v.removeAttribute('data-adb-vidx')); // canlı sayfayı kirletme
+
         // Kişisel/hesap bilgisi içerebilecek alanları ve otomasyon panelini belgeden çıkar
         // (özellikle document.body'ye düşen genel sayfa yakalamalarında önemli)
         clone.querySelectorAll(
-            '#adb-auto-widget, script, style, video, audio, iframe, button, input, select, ' +
+            '#adb-auto-widget, script, style, audio, iframe, button, input, select, ' +
             'nav, aside, header, footer, .sidebar, .navbar, .breadcrumb, ' +
             '.dx-accordion-item, .list-group, [class*="accordion"], ' +
             '[class*="profile"], [class*="account"], [class*="kullanici"], [class*="user-menu"], [id*="account"]'
         ).forEach(el => el.remove());
+
+        // Kalan video elementlerini (üstteki temizlikten sağ çıkanları) kare/bağlantı içeren yer tutucuyla değiştir
+        clone.querySelectorAll('video[data-adb-vidx]').forEach((v) => {
+            const data = videoData[v.getAttribute('data-adb-vidx')] || {};
+            const wrapper = document.createElement('div');
+            let html = '<p>🎬 <b>Video</b></p>';
+            if (data.frame) html += `<img src="${data.frame}" style="max-width:100%;">`;
+            if (data.src) html += `<p><a href="${escapeHtml(data.src)}">${escapeHtml(data.src)}</a></p>`;
+            wrapper.innerHTML = html;
+            v.replaceWith(wrapper);
+        });
+        clone.querySelectorAll('video').forEach(el => el.remove()); // eşleşmeyen kalan varsa güvenlik amaçlı temizle
+
         return clone;
     }
 
