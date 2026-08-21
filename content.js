@@ -802,6 +802,10 @@
                 }
                 pages.push({ pageKey, title, html, capturedAt: Date.now() });
                 chrome.storage.local.set({ [storageKey]: pages }, () => {
+                    if (chrome.runtime.lastError) {
+                        addLog(`⚠️ Sayfa belgeye eklenemedi (depolama hatası): ${chrome.runtime.lastError.message}`);
+                        return;
+                    }
                     addLog(`💾 Sayfa belgeye eklendi: "${title}" (toplam ${pages.length} sayfa) — içerik: "${preview || '?'}..."`);
                     refreshDocButton();
                 });
