@@ -9,6 +9,8 @@
         autoNext: true,
         antiBlur: true,
         mute: true,
+        panelLeft: null,
+        panelTop: null,
         logs: []
     };
 
@@ -23,12 +25,15 @@
     // Load initial settings
     if (isContextValid() && chrome.storage && chrome.storage.local) {
         try {
-            chrome.storage.local.get(['adb_active', 'adb_speed', 'adb_autoNext', 'adb_antiBlur', 'adb_mute'], (res) => {
+            chrome.storage.local.get(['adb_active', 'adb_speed', 'adb_autoNext', 'adb_antiBlur', 'adb_mute', 'adb_panelLeft', 'adb_panelTop'], (res) => {
                 if (res.adb_active !== undefined) state.active = res.adb_active;
                 if (res.adb_speed !== undefined) state.speed = res.adb_speed;
                 if (res.adb_autoNext !== undefined) state.autoNext = res.adb_autoNext;
                 if (res.adb_antiBlur !== undefined) state.antiBlur = res.adb_antiBlur;
                 if (res.adb_mute !== undefined) state.mute = res.adb_mute;
+                if (res.adb_panelLeft !== undefined) state.panelLeft = res.adb_panelLeft;
+                if (res.adb_panelTop !== undefined) state.panelTop = res.adb_panelTop;
+                applyPanelPosition();
                 updateUI();
             });
         } catch (e) {}
@@ -42,7 +47,9 @@
                 adb_speed: state.speed,
                 adb_autoNext: state.autoNext,
                 adb_antiBlur: state.antiBlur,
-                adb_mute: state.mute
+                adb_mute: state.mute,
+                adb_panelLeft: state.panelLeft,
+                adb_panelTop: state.panelTop
             });
         } catch (e) {}
     }
@@ -81,6 +88,9 @@
                 overflow: hidden;
                 transition: all 0.3s ease;
             }
+            #adb-auto-widget.adb-dragging {
+                transition: none;
+            }
             .adb-header {
                 background: linear-gradient(135deg, #1e3a8a, #0284c7);
                 padding: 12px 16px;
@@ -89,6 +99,8 @@
                 justify-content: space-between;
                 font-weight: 700;
                 font-size: 14px;
+                cursor: move;
+                user-select: none;
             }
             .adb-header-title {
                 display: flex;
@@ -276,6 +288,56 @@
             document.getElementById('adb-body').style.display = minimized ? 'none' : 'flex';
             document.getElementById('adb-min-btn').textContent = minimized ? '+' : '−';
         };
+
+        applyPanelPosition();
+        setupPanelDrag();
+    }
+
+    function applyPanelPosition() {
+        if (!uiContainer) return;
+        if (state.panelLeft === null || state.panelTop === null || state.panelLeft === undefined || state.panelTop === undefined) return;
+        uiContainer.style.left = state.panelLeft + 'px';
+        uiContainer.style.top = state.panelTop + 'px';
+        uiContainer.style.right = 'auto';
+        uiContainer.style.bottom = 'auto';
+    }
+
+    function setupPanelDrag() {
+        const headerEl = document.querySelector('#adb-auto-widget .adb-header');
+        if (!headerEl || headerEl.dataset.dragBound) return;
+        headerEl.dataset.dragBound = '1';
+
+        let dragOrigin = null;
+
+        headerEl.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.adb-minimize-btn')) return;
+            const rect = uiContainer.getBoundingClientRect();
+            dragOrigin = { startX: e.clientX, startY: e.clientY, startLeft: rect.left, startTop: rect.top };
+            uiContainer.classList.add('adb-dragging');
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!dragOrigin) return;
+            const maxLeft = window.innerWidth - uiContainer.offsetWidth;
+            const maxTop = window.innerHeight - uiContainer.offsetHeight;
+            const newLeft = Math.max(0, Math.min(dragOrigin.startLeft + (e.clientX - dragOrigin.startX), maxLeft));
+            const newTop = Math.max(0, Math.min(dragOrigin.startTop + (e.clientY - dragOrigin.startY), maxTop));
+            uiContainer.style.left = newLeft + 'px';
+            uiContainer.style.top = newTop + 'px';
+            uiContainer.style.right = 'auto';
+            uiContainer.style.bottom = 'auto';
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (!dragOrigin) return;
+            dragOrigin = null;
+            uiContainer.classList.remove('adb-dragging');
+            const rect = uiContainer.getBoundingClientRect();
+            state.panelLeft = Math.round(rect.left);
+            state.panelTop = Math.round(rect.top);
+            saveState();
+        });
     }
 
     function updateUI() {
