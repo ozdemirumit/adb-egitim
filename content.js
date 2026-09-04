@@ -9,6 +9,7 @@
         autoNext: true,
         antiBlur: true,
         mute: true,
+        collectDocs: false,
         panelLeft: null,
         panelTop: null,
         logs: []
@@ -27,7 +28,7 @@
     // Load initial settings
     if (isContextValid() && chrome.storage && chrome.storage.local) {
         try {
-            chrome.storage.local.get(['adb_active', 'adb_speed', 'adb_autoNext', 'adb_antiBlur', 'adb_mute', 'adb_panelLeft', 'adb_panelTop', 'adb_noticeSeen_v1'], (res) => {
+            chrome.storage.local.get(['adb_active', 'adb_speed', 'adb_autoNext', 'adb_antiBlur', 'adb_mute', 'adb_collectDocs', 'adb_panelLeft', 'adb_panelTop', 'adb_noticeSeen_v1'], (res) => {
                 usageNoticeSeen = res.adb_noticeSeen_v1 === true;
                 const notice = document.getElementById('adb-usage-notice');
                 if (notice) notice.hidden = usageNoticeSeen;
@@ -36,6 +37,9 @@
                 if (res.adb_autoNext !== undefined) state.autoNext = res.adb_autoNext;
                 if (res.adb_antiBlur !== undefined) state.antiBlur = res.adb_antiBlur;
                 if (res.adb_mute !== undefined) state.mute = res.adb_mute;
+                state.collectDocs = res.adb_collectDocs === true;
+                const collectDocsCheckbox = document.getElementById('adb-collect-docs-cb');
+                if (collectDocsCheckbox) collectDocsCheckbox.checked = state.collectDocs;
                 if (res.adb_panelLeft !== undefined) state.panelLeft = res.adb_panelLeft;
                 if (res.adb_panelTop !== undefined) state.panelTop = res.adb_panelTop;
                 applyPanelPosition();
@@ -53,6 +57,7 @@
                 adb_autoNext: state.autoNext,
                 adb_antiBlur: state.antiBlur,
                 adb_mute: state.mute,
+                adb_collectDocs: state.collectDocs,
                 adb_panelLeft: state.panelLeft,
                 adb_panelTop: state.panelTop
             });
@@ -253,6 +258,10 @@
                     <label for="adb-mute-cb">Videoları Sessize Al:</label>
                     <input type="checkbox" class="adb-checkbox" id="adb-mute-cb" ${state.mute ? 'checked' : ''}>
                 </div>
+                <div class="adb-row">
+                    <label for="adb-collect-docs-cb">Word İçin İçerik Biriktir:</label>
+                    <input type="checkbox" class="adb-checkbox" id="adb-collect-docs-cb" ${state.collectDocs ? 'checked' : ''}>
+                </div>
                 <button class="adb-export-btn" id="adb-export-doc" disabled>📄 Word'e Aktar (0 sayfa)</button>
                 <div class="adb-logs" id="adb-logs">
                     <div class="adb-log-entry">🤖 Eklenti hazır. Sayfa taranıyor...</div>
@@ -278,6 +287,14 @@
         };
 
         document.getElementById('adb-export-doc').onclick = () => exportCourseAsWord();
+        document.getElementById('adb-collect-docs-cb').onchange = (e) => {
+            state.collectDocs = e.target.checked;
+            lastSeenLessonTitle = '';
+            attemptedLessonTitles.clear();
+            saveState();
+            addLog(state.collectDocs ? '📄 Word için içerik biriktirme açıldı.' : '📄 Word için içerik biriktirme kapatıldı.');
+            updateUI();
+        };
         refreshDocButton();
 
         document.getElementById('adb-speed-select').onchange = (e) => {
@@ -872,6 +889,7 @@
     // Bu site dersler arası geçişte URL'yi değiştirmiyor (SPA); bu yüzden yakalama
     // sayfa yüklenmesine değil, başlık değişimine bağlı tetiklenir.
     function trackLessonForCapture() {
+        if (!state.collectDocs) return;
         if (!isLessonContentPage()) return;
         try {
             let title = getCurrentLessonFromSidebar();
@@ -897,6 +915,7 @@
     }
 
     function capturePageForDoc(title) {
+        if (!state.collectDocs) return;
         if (!title || attemptedLessonTitles.has(title)) return;
 
         const container = getLessonContentContainer();
@@ -914,12 +933,14 @@
     }
 
     function saveDocPage(title, html, preview) {
+        if (!state.collectDocs) return;
         if (!isContextValid() || !chrome.storage || !chrome.storage.local) return;
         const courseId = getCourseId();
         const pageKey = title; // Bu sitede ders başına URL değişmiyor; tekilleştirme başlığa göre yapılır
         const storageKey = 'adb_docs_' + courseId;
         try {
             chrome.storage.local.get([storageKey], (res) => {
+                if (!state.collectDocs) return;
                 const pages = res[storageKey] || [];
                 if (pages.some(p => p.pageKey === pageKey)) {
                     refreshDocButton();
@@ -1012,7 +1033,7 @@ ${bodyHtml}
                 addLog('⚠️ Eklenti güncellendi. Otomasyonun devam etmesi için sayfayı yenileyin (F5).');
                 return;
             }
-            trackLessonForCapture(); // Otomasyon kapalıyken de ders gezintisi belgeye eklensin
+            trackLessonForCapture(); // Yalnızca kullanıcı içerik biriktirmeyi açtıysa kaydet.
             if (!state.active) return;
             if (checkCourseCompleted()) return;
             handleVideos();
