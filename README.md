@@ -10,7 +10,7 @@ Bu proje bağımsız olarak geliştirilmiştir.
 
 Kullanıcı, eklentiyi kullanmadan önce eğitim platformunun güncel kullanım koşullarını ve ilgili kuralları kontrol etmelidir. Kullanıma izin verilmiyorsa eklenti kullanılmamalıdır.
 
-Yazılım mevcut hâliyle sunulur. Kesintisiz veya hatasız çalışma, eğitim ilerlemesinin doğru kaydedilmesi, eğitimin geçerli biçimde tamamlanması, sınav başarısı veya belge alınması konusunda garanti verilmez.
+Yazılım mevcut hâliyle sunulur. Kesintisiz veya hatasız çalışma ve eğitim ilerlemesinin doğru kaydedilmesi konusunda garanti verilmez.
 
 Kullanıcı, eklentiyi kendi tercihiyle ve kullanım risklerini değerlendirerek kullanır. Hatalı ders geçişi, ilerleme veya veri kaybı, hesap kısıtlaması ve platform kurallarına aykırılık gibi olası sonuçları dikkate almalı; işlemleri ve eğitim kayıtlarını kendisi kontrol etmelidir.
 
