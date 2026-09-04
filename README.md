@@ -1,8 +1,22 @@
 # ⚓ ADB Otomatik Eğitim İzleme Eklentisi
 
-[**⬇️ ZIP olarak indir**](https://github.com/ozdemirumit/adb-egitim/archive/refs/heads/main.zip) · [Kurulum](#kurulum) · [Kullanım](#kullanım) · [Sorun giderme](#sorun-giderme)
-
 Amatör Denizci Eğitim ve Başvuru Sistemi (`adbs.uab.gov.tr`) üzerindeki eğitim videolarını oynatmak, ders geçişlerini otomatikleştirmek ve gezilen ders içeriklerini Word belgesine aktarmak için Chrome / Microsoft Edge eklentisi.
+
+## Kullanım koşulları ve sorumluluk bildirimi
+
+Bu proje bağımsız olarak geliştirilmiştir. Resmî bir Bakanlık ürünü olarak sunulmaz; bu depoda yayımlanması, Bakanlığın veya eğitim platformunun onayını ya da kullanım iznini göstermez.
+
+**Eklenti, eğitimleri izleme, metinleri okuma, içerikleri inceleme ve öğrenme sorumluluğunuzu ortadan kaldırmaz.** Otomatik oynatma veya ders geçişi, konunun öğrenildiği ya da gerekli yeterliliğin kazanıldığı anlamına gelmez. Denizcilik ve güvenlikle ilgili bilgilerin anlaşılması ve doğru uygulanması kullanıcının sorumluluğundadır.
+
+Kullanıcı, eklentiyi kullanmadan önce eğitim platformunun güncel kullanım koşullarını ve ilgili kuralları kontrol etmelidir. Kullanıma izin verilmiyorsa eklenti kullanılmamalıdır.
+
+Yazılım mevcut hâliyle sunulur. Kesintisiz veya hatasız çalışma, eğitim ilerlemesinin doğru kaydedilmesi, eğitimin geçerli biçimde tamamlanması, sınav başarısı veya belge alınması konusunda garanti verilmez.
+
+Kullanıcı, eklentiyi kendi tercihiyle ve kullanım risklerini değerlendirerek kullanır. Hatalı ders geçişi, ilerleme veya veri kaybı, hesap kısıtlaması ve platform kurallarına aykırılık gibi olası sonuçları dikkate almalı; işlemleri ve eğitim kayıtlarını kendisi kontrol etmelidir.
+
+**Yürürlükteki hukukun izin verdiği ölçüde**, geliştiriciler ve katkıda bulunanlar, yazılımın kullanımından veya kullanılamamasından doğan zararlardan sorumlu tutulamaz. Bu bildirim, hukuken sınırlandırılması veya kaldırılması mümkün olmayan sorumlulukları ortadan kaldırmaz.
+
+[**⬇️ ZIP olarak indir**](https://github.com/ozdemirumit/adb-egitim/archive/refs/heads/main.zip) · [Kurulum](#kurulum) · [Kullanım](#kullanım) · [Sorun giderme](#sorun-giderme)
 
 ## Gerekenler
 
@@ -55,6 +69,7 @@ Ardından yukarıdaki **Eklentiyi tarayıcıya yükleyin** adımlarını uygulay
 
 1. [ADB eğitimlerim sayfasını açın](https://adbs.uab.gov.tr/users/my-educations) ve kendi hesabınızla giriş yapın. Eklenti simgesindeki **ADB Portalını Aç** düğmesi de bu adresi açar.
 2. İzlemek istediğiniz eğitimi ve ders sayfasını açın. Sayfa kurulumdan önce açıksa yenileyin.
+   İlk kullanımda paneldeki sorumluluk bilgilendirmesini okuyun. **Bilgilendirmeyi okudum** düğmesi bildirimi kapatır; bu tercih aynı tarayıcı profilinde hatırlanır. Tam metne eklenti simgesinin açılır penceresinden her zaman ulaşabilirsiniz.
 3. Sayfadaki yüzen panelde **Otomasyonu Başlat** düğmesine basın. İlk kurulumda otomasyon kapalıdır; sonraki açılışlarda önceki durum hatırlanır.
 4. Panelden oynatma hızını, sessiz modu ve otomatik geçiş ayarını değiştirebilirsiniz. Ses duymak istiyorsanız ilk kullanımda açık olan sessiz modu kapatın.
 5. Ara vermek için **Otomasyonu Durdur** düğmesine basın. Paneli başlığından sürükleyebilirsiniz; konumu hatırlanır.
