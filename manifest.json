@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "ADB (adbs.uab.gov.tr) Otomatik Eğitim İzleyici",
   "version": "1.0.0",
-  "description": "Ulaştırma ve Altyapı Bakanlığı ADB online eğitimlerini otomatik izler, süre tamamlanınca sonraki derse geçer.",
+  "description": "ADB online eğitimlerini otomatik izler, süre tamamlanınca sonraki derse geçer.",
   "permissions": [
     "activeTab",
     "storage",
