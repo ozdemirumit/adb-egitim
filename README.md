@@ -73,7 +73,7 @@ Ardından yukarıdaki **Eklentiyi tarayıcıya yükleyin** adımlarını uygulay
 3. Sayfadaki yüzen panelde **Otomasyonu Başlat** düğmesine basın. İlk kurulumda otomasyon kapalıdır; sonraki açılışlarda önceki durum hatırlanır.
 4. Panelden oynatma hızını, sessiz modu ve otomatik geçiş ayarını değiştirebilirsiniz. Ses duymak istiyorsanız ilk kullanımda açık olan sessiz modu kapatın.
 5. Ara vermek için **Otomasyonu Durdur** düğmesine basın. Paneli başlığından sürükleyebilirsiniz; konumu hatırlanır.
-6. Gezilen dersler biriktikçe **Word'e Aktar** düğmesiyle o kursun kaydedilmiş sayfalarını `.doc` olarak indirin. Henüz ziyaret edilmeyen dersler belgeye eklenmez; videolar oynatılabilir video yerine yakalanabilen bir kare ve kaynak bağlantısıyla temsil edilir.
+6. **Word için içerik biriktirme varsayılan olarak kapalıdır.** Dersleri kaydetmek isterseniz panelde **Word İçin İçerik Biriktir** seçeneğini açın; tercihiniz hatırlanır. Bu seçenek açıkken gezilen dersler biriktikçe **Word'e Aktar** düğmesiyle o kursun kaydedilmiş sayfalarını `.doc` olarak indirin. Seçeneği kapatmak yeni içerik toplamayı durdurur; önceki kayıtlar silinmez ve dışa aktarılabilir. Kapalıyken gezilen dersler sonradan otomatik eklenmez; kaydetmek için bu dersleri seçenek açıkken yeniden açın. Videolar oynatılabilir video yerine yakalanabilen bir kare ve kaynak bağlantısıyla temsil edilir.
 
 Ders geçişleri sitenin butonlarına ve sayaçlarına bağlıdır. Site değişiklikleri, oturumun sona ermesi veya tarayıcının arka plan kısıtlamaları otomasyonu etkileyebilir; ilerlemeyi panelden kontrol edin.
 
@@ -109,7 +109,7 @@ Git yerel değişiklik veya dal ayrışması nedeniyle durursa dosyalarınızı 
 | Panel görünmüyor | Eklentinin etkin olduğunu ve `https://adbs.uab.gov.tr/` üzerinde olduğunuzu kontrol edin; sayfayı yenileyin. |
 | Güncellemeden sonra eklenti çalışmıyor | Önce eklenti kartındaki yeniden yükleme düğmesine basın, sonra ders sekmesini yenileyin. |
 | Video sessiz / ders ilerlemiyor | Panelde sessiz mod, otomasyon ve otomatik geçiş ayarlarını kontrol edin. Girişinizin açık olduğundan emin olun; gerekirse videoyu elle başlatın. |
-| Word'e aktarma düğmesi pasif | Bir ders açıp içeriğin yüklenmesini bekleyin. Panelde kaydedilen sayfa sayısını ve hata mesajlarını kontrol edin. |
+| Word'e aktarma düğmesi pasif | Önce **Word İçin İçerik Biriktir** seçeneğini açın, bir ders açıp içeriğin yüklenmesini bekleyin. Panelde kaydedilen sayfa sayısını ve hata mesajlarını kontrol edin. |
 | Yönetilen tarayıcıda yükleme engelleniyor | Eklenti yükleme izni için tarayıcı yöneticinize başvurun. |
 
 Sorun sürerse [GitHub Issues](https://github.com/ozdemirumit/adb-egitim/issues) üzerinden tarayıcı adını, yaptığınız adımı ve hata metnini paylaşabilirsiniz. Ekran görüntülerindeki kişisel bilgileri gizleyin.
@@ -117,7 +117,7 @@ Sorun sürerse [GitHub Issues](https://github.com/ozdemirumit/adb-egitim/issues)
 ## Gizlilik ve yerel kayıtlar
 
 - Giriş işlemini eğitim platformunda kendiniz yaparsınız; eklentide şifre isteyen ayrı bir giriş ekranı yoktur.
-- Ayarlar, panel konumu ve Word'e aktarmak için yakalanan ders içerikleri tarayıcınızın `chrome.storage.local` alanında saklanır. Bu nedenle eklenti “hiç veri saklamaz” şeklinde değerlendirilmemelidir.
+- Ayarlar ve panel konumu tarayıcınızın `chrome.storage.local` alanında saklanır. Word için ders içerikleri yalnızca **Word İçin İçerik Biriktir** seçeneğini açarsanız toplanır; bu özellik varsayılan olarak kapalıdır.
 - Kodda ayrı bir veri toplama sunucusuna gönderim bulunmaz. Belgeye görsel eklemek için sayfadaki görsellerin adreslerine indirme istekleri yapılabilir.
 - Eklentiyi kaldırmadan önce saklamak istediğiniz dersleri Word'e aktarın; kaldırma işlemi eklentinin yerel kayıtlarını da temizler.
 
