@@ -4,7 +4,7 @@ Amatör Denizci Eğitim ve Başvuru Sistemi (`adbs.uab.gov.tr`) üzerindeki eği
 
 ## Kullanım koşulları ve sorumluluk bildirimi
 
-Bu proje bağımsız olarak geliştirilmiştir. Resmî bir Bakanlık ürünü olarak sunulmaz; bu depoda yayımlanması, Bakanlığın veya eğitim platformunun onayını ya da kullanım iznini göstermez.
+Bu proje bağımsız olarak geliştirilmiştir.
 
 **Eklenti, eğitimleri izleme, metinleri okuma, içerikleri inceleme ve öğrenme sorumluluğunuzu ortadan kaldırmaz.** Otomatik oynatma veya ders geçişi, konunun öğrenildiği ya da gerekli yeterliliğin kazanıldığı anlamına gelmez. Denizcilik ve güvenlikle ilgili bilgilerin anlaşılması ve doğru uygulanması kullanıcının sorumluluğundadır.
 
@@ -53,7 +53,7 @@ Kullanıcı, eklentiyi kendi tercihiyle ve kullanım risklerini değerlendirerek
 4. Bir önceki adımda hazırladığınız, **`manifest.json` dosyasını içeren klasörü** seçin.
 5. Eklentiler listesinde **ADB (adbs.uab.gov.tr) Otomatik Eğitim İzleyici** kartının göründüğünü ve etkin olduğunu kontrol edin.
 
-Tarayıcıdaki yerel eklenti yükleme adımları için: [Chrome resmi rehberi](https://support.google.com/chrome/a/answer/2714278?hl=en), [Edge resmi rehberi](https://learn.microsoft.com/en-us/microsoft-edge/extensions/getting-started/extension-sideloading).
+Tarayıcıdaki yerel eklenti yükleme adımları için: [Chrome rehberi](https://support.google.com/chrome/a/answer/2714278?hl=en), [Edge rehberi](https://learn.microsoft.com/en-us/microsoft-edge/extensions/getting-started/extension-sideloading).
 
 ### Alternatif: Git ile indirme
 
@@ -110,13 +110,13 @@ Git yerel değişiklik veya dal ayrışması nedeniyle durursa dosyalarınızı 
 | Güncellemeden sonra eklenti çalışmıyor | Önce eklenti kartındaki yeniden yükleme düğmesine basın, sonra ders sekmesini yenileyin. |
 | Video sessiz / ders ilerlemiyor | Panelde sessiz mod, otomasyon ve otomatik geçiş ayarlarını kontrol edin. Girişinizin açık olduğundan emin olun; gerekirse videoyu elle başlatın. |
 | Word'e aktarma düğmesi pasif | Bir ders açıp içeriğin yüklenmesini bekleyin. Panelde kaydedilen sayfa sayısını ve hata mesajlarını kontrol edin. |
-| Kurum bilgisayarında yükleme engelleniyor | Tarayıcı kuruluşunuz tarafından yönetiliyorsa eklenti yükleme izni için yöneticinize başvurun. |
+| Yönetilen tarayıcıda yükleme engelleniyor | Eklenti yükleme izni için tarayıcı yöneticinize başvurun. |
 
 Sorun sürerse [GitHub Issues](https://github.com/ozdemirumit/adb-egitim/issues) üzerinden tarayıcı adını, yaptığınız adımı ve hata metnini paylaşabilirsiniz. Ekran görüntülerindeki kişisel bilgileri gizleyin.
 
 ## Gizlilik ve yerel kayıtlar
 
-- Giriş işlemini resmi site üzerinde kendiniz yaparsınız; eklentide şifre isteyen ayrı bir giriş ekranı yoktur.
+- Giriş işlemini eğitim platformunda kendiniz yaparsınız; eklentide şifre isteyen ayrı bir giriş ekranı yoktur.
 - Ayarlar, panel konumu ve Word'e aktarmak için yakalanan ders içerikleri tarayıcınızın `chrome.storage.local` alanında saklanır. Bu nedenle eklenti “hiç veri saklamaz” şeklinde değerlendirilmemelidir.
 - Kodda ayrı bir veri toplama sunucusuna gönderim bulunmaz. Belgeye görsel eklemek için sayfadaki görsellerin adreslerine indirme istekleri yapılabilir.
 - Eklentiyi kaldırmadan önce saklamak istediğiniz dersleri Word'e aktarın; kaldırma işlemi eklentinin yerel kayıtlarını da temizler.
