@@ -1,81 +1,120 @@
-# ⚓ ADB (adbs.uab.gov.tr) Otomatik Eğitim İzleme Eklentisi
+# ⚓ ADB Otomatik Eğitim İzleme Eklentisi
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Chrome_Extension-Manifest_V3-orange.svg" alt="Manifest V3">
-  <img src="https://img.shields.io/badge/Security-No_Credentials_Stored-brightgreen.svg" alt="Security">
-</p>
+[**⬇️ ZIP olarak indir**](https://github.com/ozdemirumit/adb-egitim/archive/refs/heads/main.zip) · [Kurulum](#kurulum) · [Kullanım](#kullanım) · [Sorun giderme](#sorun-giderme)
 
-T.C. Ulaştırma ve Altyapı Bakanlığı **Amatör Denizci Eğitim ve Başvuru Sistemi** (`https://adbs.uab.gov.tr/users/my-educations`) üzerindeki online eğitim ders videolarını sırasıyla izleyen, süreler dolduğunda ve video bittiğinde otomatik olarak sonraki derse geçen Chrome / Edge tarayıcı eklentisidir.
+Amatör Denizci Eğitim ve Başvuru Sistemi (`adbs.uab.gov.tr`) üzerindeki eğitim videolarını oynatmak, ders geçişlerini otomatikleştirmek ve gezilen ders içeriklerini Word belgesine aktarmak için Chrome / Microsoft Edge eklentisi.
 
----
+## Gerekenler
 
-## 🛡️ Güvenlik & Gizlilik İlkesi
+- Bilgisayarınızda Google Chrome veya Microsoft Edge.
+- Eğitimlere erişmek için ADB sistemine kendi hesabınızla giriş yapabilmeniz.
+- İndirilen dosyaları saklayacağınız bir klasör.
 
-> [!IMPORTANT]
-> **Kullanıcı Verileri Güvendedir:**
-> - Eklenti e-Devlet şifrenizi, T.C. Kimlik numaranızı veya kişisel bilgilerinizi **hiçbir şekilde kaydetmez, saklamaz ve uzak sunuculara göndermez**.
-> - Giriş işlemi kullanıcının kendi kontrolünde `adbs.uab.gov.tr` üzerinde manuel olarak yapılır.
-> - Kod tamamen açık kaynaklıdır.
+**Kodlama bilgisi, Node.js, Python, terminal komutu veya derleme gerekmez.** Dosyalar doğrudan tarayıcıya yüklenir. Git yalnızca aşağıdaki alternatif indirme yöntemi için gereklidir.
 
----
+## Kurulum
 
-## ✨ Öne Çıkan Özellikler
+### 1. Dosyaları indirin ve ZIP'ten çıkarın
 
-- 🚀 **Tam Otomatik İlerleme:** Video bitişlerinde, sayaç sıfırlanmalarında *"Devam Et"*, *"Sonraki Ders"*, *"Eğitimi Tamamla"* ve onay butonlarını otomatik algılar ve tıklar. iframe/frame içindeki butonları da tarar.
-- ⏱️ **Rastgele Gecikmeli Tetikleme:** Geri sayım sayacı 00:00'a ulaştığında butona hemen değil, 1-5 saniye arasında rastgele bir gecikmeyle bir kez basar.
-- ⚡ **Ayarlanabilir Oynatma Hızı:** Videoları `1.0x`, `1.5x`, `2.0x`, `4.0x`, `8.0x` veya `16.0x` hızlarında oynatabilme.
-- 🛡️ **Sekme Odağı Koruması (Anti-Blur):** Başka bir sekmede çalışırken veya pencere küçültüldüğünde platformun videoyu durdurmasını engeller.
-- 🔇 **Sessiz Mod (Mute):** Arka planda videoları sessiz olarak çalıştırma imkanı.
-- 🖥️ **Canlı Kontrol Paneli:** Sayfa üzerinde açılan yüzen panelden durum, ders, kalan süre ve video ilerlemesi takip edilir.
-- 📄 **Word'e Aktarma:** Gezilen ders sayfaları (metin, tablo, görsel) arka planda kursa özel biriktirilir; panelden tek tıkla tüm kurs tek bir `.doc` dosyası olarak indirilebilir. Kursa daha sonra devam edilirse aynı dosyaya eklemeye devam eder.
+1. [**Eklentiyi ZIP olarak indirmek için tıklayın**](https://github.com/ozdemirumit/adb-egitim/archive/refs/heads/main.zip). Bu bağlantı `main` dalının güncel dosyalarını indirir.
+2. İnen `adb-egitim-main.zip` dosyasına Windows'ta sağ tıklayıp **Tümünü ayıkla…** seçeneğini kullanın. macOS'ta ZIP dosyasına çift tıklayın.
+3. Çıkan klasörü kalıcı bir konuma taşıyın; örneğin Belgeler klasörünüzün içine.
+4. Klasörü açın ve içinde **`manifest.json`** dosyasını gördüğünüzden emin olun. İç içe iki `adb-egitim-main` klasörü oluştuysa `manifest.json` bulunan iç klasörü kullanın.
 
----
+İndirme bağlantısına alternatif olarak [GitHub depo sayfasında](https://github.com/ozdemirumit/adb-egitim) **Code → Download ZIP** seçeneğini kullanabilirsiniz.
 
-## 📁 Proje Klasör Yapısı
+> Tarayıcıya ZIP dosyasını değil, ZIP'ten çıkardığınız ve doğrudan `manifest.json` içeren klasörü yükleyeceksiniz. Kurulumdan sonra bu klasörü silmeyin veya taşımayın; tarayıcı dosyaları buradan okur.
 
+### 2. Eklentiyi tarayıcıya yükleyin
+
+1. Kullandığınız tarayıcının adres çubuğuna aşağıdaki adresi kopyalayın ve Enter'a basın:
+
+   | Tarayıcı | Adres |
+   | --- | --- |
+   | Google Chrome | `chrome://extensions/` |
+   | Microsoft Edge | `edge://extensions/` |
+
+2. **Geliştirici modu** (Developer mode) anahtarını açın ve açık bırakın.
+3. **Paketlenmemiş öğe yükle** (Load unpacked) düğmesine tıklayın. Düğmenin Türkçe adı tarayıcıya göre biraz değişebilir.
+4. Bir önceki adımda hazırladığınız, **`manifest.json` dosyasını içeren klasörü** seçin.
+5. Eklentiler listesinde **ADB (adbs.uab.gov.tr) Otomatik Eğitim İzleyici** kartının göründüğünü ve etkin olduğunu kontrol edin.
+
+Tarayıcıdaki yerel eklenti yükleme adımları için: [Chrome resmi rehberi](https://support.google.com/chrome/a/answer/2714278?hl=en), [Edge resmi rehberi](https://learn.microsoft.com/en-us/microsoft-edge/extensions/getting-started/extension-sideloading).
+
+### Alternatif: Git ile indirme
+
+Git bilgisayarınızda zaten kuruluysa, terminalde dosyaları saklamak istediğiniz konumda çalıştırın:
+
+```bash
+git clone https://github.com/ozdemirumit/adb-egitim.git
 ```
-ADB-egitim/
-├── manifest.json    # Chrome Eklentisi Manifest V3 Yapılandırması
-├── content.js       # Chrome Eklentisi Sayfa İçi Otomasyon Betiği
-├── popup.html        # Eklenti Açılır Arayüzü
-├── popup.js          # Eklenti Açılır Arayüz Betiği
-├── .gitignore        # Git dışlama kuralları
-└── README.md         # Proje Dökümantasyonu
+
+Ardından yukarıdaki **Eklentiyi tarayıcıya yükleyin** adımlarını uygulayın ve oluşan `adb-egitim` klasörünü seçin. Ek paket kurulumu veya çalıştırma komutu yoktur.
+
+## Kullanım
+
+1. [ADB eğitimlerim sayfasını açın](https://adbs.uab.gov.tr/users/my-educations) ve kendi hesabınızla giriş yapın. Eklenti simgesindeki **ADB Portalını Aç** düğmesi de bu adresi açar.
+2. İzlemek istediğiniz eğitimi ve ders sayfasını açın. Sayfa kurulumdan önce açıksa yenileyin.
+3. Sayfadaki yüzen panelde **Otomasyonu Başlat** düğmesine basın. İlk kurulumda otomasyon kapalıdır; sonraki açılışlarda önceki durum hatırlanır.
+4. Panelden oynatma hızını, sessiz modu ve otomatik geçiş ayarını değiştirebilirsiniz. Ses duymak istiyorsanız ilk kullanımda açık olan sessiz modu kapatın.
+5. Ara vermek için **Otomasyonu Durdur** düğmesine basın. Paneli başlığından sürükleyebilirsiniz; konumu hatırlanır.
+6. Gezilen dersler biriktikçe **Word'e Aktar** düğmesiyle o kursun kaydedilmiş sayfalarını `.doc` olarak indirin. Henüz ziyaret edilmeyen dersler belgeye eklenmez; videolar oynatılabilir video yerine yakalanabilen bir kare ve kaynak bağlantısıyla temsil edilir.
+
+Ders geçişleri sitenin butonlarına ve sayaçlarına bağlıdır. Site değişiklikleri, oturumun sona ermesi veya tarayıcının arka plan kısıtlamaları otomasyonu etkileyebilir; ilerlemeyi panelden kontrol edin.
+
+## Özellikler
+
+- Video bitişi ve sayaç durumuna göre devam / sonraki ders butonlarını algılama; çerçeve içindeki butonları da tarama.
+- Sayaç sıfırlandığında tıklamadan önce 1–5 saniye rastgele bekleme.
+- `1.0x`, `1.5x`, `2.0x`, `4.0x`, `8.0x`, `16.0x` oynatma hızı seçenekleri.
+- Sekme odağı nedeniyle duraklatmayı önlemeye yönelik Anti-Blur desteği ve sessiz mod.
+- Sürüklenebilir durum paneli ve tamamlanan kurs algılandığında otomatik durma.
+- Gezilen ders metinlerini, tablolarını ve görsellerini kurs bazında saklayıp Word'e aktarma.
+
+## Güncelleme
+
+**ZIP ile kurduysanız:** Otomasyonu durdurun, güncel ZIP'i tekrar indirip ayıklayın. Yeni dosyaları mevcut eklenti klasörünüzde aynı adlı dosyaların üzerine kopyalayın. `manifest.json` aynı klasörde kalmalı; yeni klasörü eskisinin içine eklemeyin.
+
+**Git ile kurduysanız:** Terminalde klonladığınız `adb-egitim` klasöründe çalıştırın:
+
+```bash
+git pull --ff-only
 ```
 
----
+Git yerel değişiklik veya dal ayrışması nedeniyle durursa dosyalarınızı silmeden uyarıyı inceleyin.
 
-## 🚀 Kurulum ve Kullanım
+**Her iki yöntemde de:** Tarayıcının eklentiler sayfasında ADB kartındaki **Yeniden yükle** (dairesel ok) düğmesine basın, ardından açık ADB ders sayfalarını yenileyin. ZIP ve Git ile kurulan bu kopyayı güncellemek için bu adımları tekrarlayın.
 
-1. Google Chrome veya Microsoft Edge tarayıcınızda `chrome://extensions/` adresine gidin.
-2. Sağ üst köşedeki **"Geliştirici modu" (Developer mode)** anahtarını açın.
-3. Sol üstteki **"Paketlenmemiş öge yükle" (Load unpacked)** butonuna tıklayın.
-4. `adb-egitim` klasörünü seçin.
-5. `https://adbs.uab.gov.tr/users/my-educations` adresine gidin ve giriş yapın.
-6. Ekranın sağ alt köşesinde beliren **canlı yüzen paneli (Floating UI)** kullanarak otomasyonu başlatın.
+## Sorun giderme
 
----
+| Sorun | Ne yapmalıyım? |
+| --- | --- |
+| “Manifest dosyası bulunamadı” / yükleme hatası | ZIP'i ayıklayın ve doğrudan `manifest.json` içeren klasörü seçin. Üst klasörü veya tek bir dosyayı seçmeyin. |
+| “Paketlenmemiş öğe yükle” görünmüyor | Doğru eklentiler adresini açtığınızı ve Geliştirici modunun açık olduğunu kontrol edin. |
+| Panel görünmüyor | Eklentinin etkin olduğunu ve `https://adbs.uab.gov.tr/` üzerinde olduğunuzu kontrol edin; sayfayı yenileyin. |
+| Güncellemeden sonra eklenti çalışmıyor | Önce eklenti kartındaki yeniden yükleme düğmesine basın, sonra ders sekmesini yenileyin. |
+| Video sessiz / ders ilerlemiyor | Panelde sessiz mod, otomasyon ve otomatik geçiş ayarlarını kontrol edin. Girişinizin açık olduğundan emin olun; gerekirse videoyu elle başlatın. |
+| Word'e aktarma düğmesi pasif | Bir ders açıp içeriğin yüklenmesini bekleyin. Panelde kaydedilen sayfa sayısını ve hata mesajlarını kontrol edin. |
+| Kurum bilgisayarında yükleme engelleniyor | Tarayıcı kuruluşunuz tarafından yönetiliyorsa eklenti yükleme izni için yöneticinize başvurun. |
 
-## 🔗 GitHub Depo Bilgileri
+Sorun sürerse [GitHub Issues](https://github.com/ozdemirumit/adb-egitim/issues) üzerinden tarayıcı adını, yaptığınız adımı ve hata metnini paylaşabilirsiniz. Ekran görüntülerindeki kişisel bilgileri gizleyin.
 
-- **Repository URL:** [https://github.com/ozdemirumit/adb-egitim](https://github.com/ozdemirumit/adb-egitim)
-- **Klonlama Komutu:**
-  ```bash
-  git clone https://github.com/ozdemirumit/adb-egitim.git
-  ```
+## Gizlilik ve yerel kayıtlar
 
----
+- Giriş işlemini resmi site üzerinde kendiniz yaparsınız; eklentide şifre isteyen ayrı bir giriş ekranı yoktur.
+- Ayarlar, panel konumu ve Word'e aktarmak için yakalanan ders içerikleri tarayıcınızın `chrome.storage.local` alanında saklanır. Bu nedenle eklenti “hiç veri saklamaz” şeklinde değerlendirilmemelidir.
+- Kodda ayrı bir veri toplama sunucusuna gönderim bulunmaz. Belgeye görsel eklemek için sayfadaki görsellerin adreslerine indirme istekleri yapılabilir.
+- Eklentiyi kaldırmadan önce saklamak istediğiniz dersleri Word'e aktarın; kaldırma işlemi eklentinin yerel kayıtlarını da temizler.
 
-## ❓ Sıkça Sorulan Sorular (SSS)
+## Proje dosyaları
 
-**S: Şifrem veya T.C. Kimlik numaram kaydediliyor mu?**
-*C: Hayır. Giriş işlemleri resmi e-Devlet kapısı üzerinden tamamen kullanıcının kendi kontrolünde yapılır.*
-
-**S: Sekmeyi değiştirdiğimde veya tarayıcıyı alta aldığımda videolar duruyor mu?**
-*C: Hayır. Eklentiye dahil edilen Anti-Blur (Sekme Odak Koruması) sayesinde tarayıcı arka planda olsa bile videolar izlenmeye devam eder.*
-
-**S: Videolar bittiğinde ne olur?**
-*C: Otomasyon "Devam Et" veya "Sonraki Ders" butonunu algılayarak bir sonraki modüle veya kursa otomatik geçiş yapar.*
-
-**S: Geri sayım sayacı bitince buton hemen mi tıklanıyor?**
-*C: Hayır. Doğal bir kullanım hissi vermesi için 1-5 saniye arasında rastgele bir gecikmeden sonra bir kez tıklanır.*
+```text
+adb-egitim/
+├── manifest.json   # Eklenti tanımı, izinler ve çalışacağı site
+├── antiblur.js     # Sayfa odağı davranışına müdahale
+├── content.js      # Otomasyon, yüzen panel ve Word'e aktarma
+├── popup.html      # Eklenti simgesinin açılır penceresi
+├── popup.js        # ADB portalını açan düğme
+├── .gitignore
+└── README.md       # Bu rehber
+```
