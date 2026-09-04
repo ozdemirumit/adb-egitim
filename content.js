@@ -22,10 +22,15 @@
         }
     }
 
+    let usageNoticeSeen = false;
+
     // Load initial settings
     if (isContextValid() && chrome.storage && chrome.storage.local) {
         try {
-            chrome.storage.local.get(['adb_active', 'adb_speed', 'adb_autoNext', 'adb_antiBlur', 'adb_mute', 'adb_panelLeft', 'adb_panelTop'], (res) => {
+            chrome.storage.local.get(['adb_active', 'adb_speed', 'adb_autoNext', 'adb_antiBlur', 'adb_mute', 'adb_panelLeft', 'adb_panelTop', 'adb_noticeSeen_v1'], (res) => {
+                usageNoticeSeen = res.adb_noticeSeen_v1 === true;
+                const notice = document.getElementById('adb-usage-notice');
+                if (notice) notice.hidden = usageNoticeSeen;
                 if (res.adb_active !== undefined) state.active = res.adb_active;
                 if (res.adb_speed !== undefined) state.speed = res.adb_speed;
                 if (res.adb_autoNext !== undefined) state.autoNext = res.adb_autoNext;
@@ -216,6 +221,12 @@
                 <button class="adb-minimize-btn" id="adb-min-btn">−</button>
             </div>
             <div class="adb-body" id="adb-body">
+                <section id="adb-usage-notice" aria-label="Kullanım bilgilendirmesi" ${usageNoticeSeen ? 'hidden' : ''} style="padding:10px; margin-bottom:12px; border:1px solid #64748b; border-radius:8px; font-size:12px; line-height:1.5;">
+                    <strong>Eğitim sorumluluğu size aittir.</strong>
+                    <p>Bu araç eğitimleri okuma, izleme ve öğrenme sorumluluğunuzu kaldırmaz. Platform kurallarını kontrol edin; izin verilmiyorsa kullanmayın. Kullanım risklerini değerlendirerek ilerleyin; hatasız çalışma veya eğitim tamamlama garantisi verilmez.</p>
+                    <a href="https://github.com/ozdemirumit/adb-egitim#kullanım-koşulları-ve-sorumluluk-bildirimi" target="_blank" rel="noopener noreferrer" style="color:#7dd3fc;">Kullanım koşulları ve sorumluluk bildirimi</a>
+                    <button type="button" id="adb-dismiss-notice" style="display:block; margin-top:8px; padding:6px 12px; cursor:pointer;">Bilgilendirmeyi okudum</button>
+                </section>
                 <button class="adb-toggle-btn ${state.active ? 'stop' : ''}" id="adb-toggle-active">
                     ${state.active ? '⏸️ Otomasyonu Durdur' : '▶️ Otomasyonu Başlat'}
                 </button>
@@ -250,6 +261,14 @@
         `;
 
         document.body.appendChild(uiContainer);
+
+        document.getElementById('adb-dismiss-notice').onclick = () => {
+            usageNoticeSeen = true;
+            document.getElementById('adb-usage-notice').hidden = true;
+            if (isContextValid() && chrome.storage && chrome.storage.local) {
+                chrome.storage.local.set({ adb_noticeSeen_v1: true });
+            }
+        };
 
         document.getElementById('adb-toggle-active').onclick = () => {
             state.active = !state.active;
